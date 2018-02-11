@@ -66,7 +66,7 @@ private:
 		bool no_error = true;
 		boost::uint32_t recv_used = 0;
 
-		do
+		do 
 		{
 			boost::uint8_t* dst = buffer + recv_used;
 			boost::uint32_t dstLen = length - recv_used;
@@ -175,14 +175,17 @@ private:
 	{
 		CHECK_DATA_LENGTH(dataLen, sizeof(ss5_select_request));
 		ss5_select_request* request = (ss5_select_request*)data;
-		if (request->ver != 0x05) {	//SOCKS5 version=0x05
+		if (request->ver != 0x05) //SOCKS5 version=0x05
+		{	
 			return err_protocol;
 		}
 
 		CHECK_DATA_LENGTH(dataLen, sizeof(ss5_select_request) + request->nmethods);
 
-		for (unsigned int i = 0; i < request->nmethods; i++) {
-			if (request->methods[i] == 0x00) {	//SOCKS5 no auth
+		for (unsigned int i = 0; i < request->nmethods; i++)
+		{
+			if (request->methods[i] == 0x00) //SOCKS5 no auth
+			{	
 				status_ = proxy_request;
 
 				ss5_select_response response;
@@ -223,7 +226,8 @@ private:
 		boost::uint32_t pos = 0;
 		CHECK_DATA_LENGTH(dataLen, sizeof(ss5_proxy_request));
 		ss5_proxy_request* request = (ss5_proxy_request*)(data + pos);
-		if (request->ver != 0x05 || request->rsv != 0x00) {
+		if (request->ver != 0x05 || request->rsv != 0x00) 
+		{
 			return err_protocol;
 		}
 
@@ -341,8 +345,10 @@ private:
 
 	boost::int32_t handle_parse_proxy_content(boost::uint8_t* data, boost::uint32_t dataLen)
 	{
-		if (client_) {
-			if (dataLen != client_->handle_send(data, dataLen)) {
+		if (client_)
+		{
+			if (dataLen != client_->handle_send(data, dataLen)) 
+			{
 				return err_unknown;
 			}
 		}
@@ -543,8 +549,7 @@ public:
 			
 			return true;
 		}
-		catch (...)
-		{
+		catch (...) {
 			std::cout << opts << std::endl;
 			return false;
 		}
@@ -561,7 +566,8 @@ public:
 		boost::thread_group thread_group_;
 		size_t cpu_num = boost::thread::hardware_concurrency();
 		size_t _threads_num = cpu_num * 2;
-		for (size_t i = 0; i < _threads_num; i++) {
+		for (size_t i = 0; i < _threads_num; i++) 
+		{
 			thread_group_.create_thread(boost::bind(&hive::run, hive_));
 		}
 
@@ -636,7 +642,10 @@ int main(int argc, const char * argv[])
 {
 	boost::shared_ptr< hive > _hive(new hive());
 	boost::shared_ptr< service > _service(new service(_hive));
-	if (!_service->parse(argc, argv)) return 0;
+	if (!_service->parse(argc, argv)) 
+	{
+		return 0;
+	}
 
 	boost::shared_ptr< xxtea_repeater > _repeater(new xxtea_repeater(_service->get_server_ip(), _service->get_server_port(), _service->get_key()));
 

@@ -107,14 +107,17 @@ private:
 	void btea(boost::uint32_t *v, boost::int32_t n, boost::uint32_t* key) {
 		boost::uint32_t y, z, sum, DELTA = 0x9e3779b9;
 		boost::int32_t p, r, e;
-		if (n > 1) {          /* Coding Part */
+		if (n > 1) 
+		{          /* Coding Part */
 			r = 6 + 52 / n;
 			sum = 0;
 			z = v[n - 1];
-			do {
+			do 
+			{
 				sum += DELTA;
 				e = (sum >> 2) & 3;
-				for (p = 0; p < n - 1; p++) {
+				for (p = 0; p < n - 1; p++)
+				{
 					y = v[p + 1];
 					z = v[p] += MX;
 				}
@@ -122,14 +125,17 @@ private:
 				z = v[n - 1] += MX;
 			} while (--r);
 		}
-		else if (n < -1) {  /* Decoding Part */
+		else if (n < -1) 
+		{  /* Decoding Part */
 			n = -n;
 			r = 6 + 52 / n;
 			sum = r*DELTA;
 			y = v[0];
-			do {
+			do 
+			{
 				e = (sum >> 2) & 3;
-				for (p = n - 1; p > 0; p--) {
+				for (p = n - 1; p > 0; p--)
+				{
 					z = v[p - 1];
 					y = v[p] -= MX;
 				}

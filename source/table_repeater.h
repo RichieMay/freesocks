@@ -48,8 +48,7 @@ public:
 	int encrypt(boost::uint8_t* src, boost::uint32_t srcLen, boost::uint8_t** dst, boost::uint32_t& dstLen)
 	{
 		dstLen = srcLen;
-		while (srcLen-- > 0)
-		{
+		while (srcLen-- > 0) {
 			src[srcLen] = encrypt_table_[src[srcLen]];
 		}
 
@@ -60,8 +59,7 @@ public:
 	int decrypt(boost::uint8_t* src, boost::uint32_t srcLen, boost::uint8_t** dst, boost::uint32_t& dstLen)
 	{
 		dstLen = srcLen;
-		while (srcLen-- > 0)
-		{
+		while (srcLen-- > 0) {
 			src[srcLen] = decrypt_table_[src[srcLen]];
 		}
 
