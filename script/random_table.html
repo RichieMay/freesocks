@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<!--STATUS OK-->
+<html>
+<body>
+<p id="table"></p>
+<textarea id="encrypt" rows="20" cols="100" value=""></textarea>
+<textarea id="decrypt" rows="20" cols="100" value=""></textarea>
+
+<script type="text/javascript">
+var encrypt_table = new Array(256);
+var decrypt_table = new Array(256);
+
+for(let i = 0 ; i < 256; i++)
+{
+	encrypt_table[i] = decrypt_table[i] = i;
+}
+
+for (let i = 256 - 1; i > 0; i--) 
+{
+  let j = Math.floor( Math.random() * (i + 1) );
+  let t = encrypt_table[i];
+  
+  encrypt_table[i] = encrypt_table[j];
+  decrypt_table[encrypt_table[j]] = i;
+  
+  encrypt_table[j] = t;
+  decrypt_table[t] = j;
+}
+
+var encrypt = "", decrypt = "";
+for (let i = 0; i < 256; i++) 
+{
+	if (i % 32 == 0 && i != 0)
+	{
+		encrypt += "\n";
+		decrypt += "\n";
+	}
+	
+	let x = "0" + encrypt_table[i].toString(16);
+	encrypt += ("0x" + x.substr(-2) + ",");
+	
+	x = "0" + decrypt_table[i].toString(16);
+	decrypt += ("0x" + x.substr(-2) + ",");
+}
+
+encrypt = encrypt.substr(0, encrypt.length-1);
+decrypt = decrypt.substr(0, decrypt.length-1);
+
+document.getElementById("encrypt").value = encrypt;
+document.getElementById("decrypt").value = decrypt;
+
+</script>
+</body>
+</html>
