@@ -237,49 +237,48 @@ private:
 		switch (request->atyp)
 		{
 			case ss5_ipv4:
-			{
-				unsigned int ipv4 = 0;
-				CHECK_DATA_LENGTH(dataLen, pos + sizeof(ipv4) + sizeof(address.port));	//IPV4: INT + SHORT
+				{
+					unsigned int ipv4 = 0;
+					CHECK_DATA_LENGTH(dataLen, pos + sizeof(ipv4) + sizeof(address.port));	//IPV4: INT + SHORT
 
-				memcpy(&ipv4, data + pos, sizeof(ipv4));
-				pos += sizeof(ipv4);
+					memcpy(&ipv4, data + pos, sizeof(ipv4));
+					pos += sizeof(ipv4);
 
-				memcpy(&address.port, data + pos, sizeof(address.port));
-				pos += sizeof(address.port);
+					memcpy(&address.port, data + pos, sizeof(address.port));
+					pos += sizeof(address.port);
 
-				address.host = boost::asio::ip::address_v4(boost::asio::detail::socket_ops::network_to_host_long(ipv4)).to_string();
-			}
+					address.host = boost::asio::ip::address_v4(boost::asio::detail::socket_ops::network_to_host_long(ipv4)).to_string();
+				}
+				break;
+			case ss5_fqdn:
+				{
+					CHECK_DATA_LENGTH(dataLen, pos + sizeof(unsigned char));	//DOMAIN: CHAR
+					unsigned char domain_len = *(data + pos);
+					pos += sizeof(unsigned char);
 
-			break;
-		case ss5_fqdn:
-			{
-				CHECK_DATA_LENGTH(dataLen, pos + sizeof(unsigned char));	//DOMAIN: CHAR
-				unsigned char domain_len = *(data + pos);
-				pos += sizeof(unsigned char);
+					CHECK_DATA_LENGTH(dataLen, pos + domain_len + sizeof(address.port)); //DOMAIN: STRING + SHORT
+					address.host = std::string((char*)data + pos, domain_len);
+					pos += domain_len;
 
-				CHECK_DATA_LENGTH(dataLen, pos + domain_len + sizeof(address.port)); //DOMAIN: STRING + SHORT
-				address.host = std::string((char*)data + pos, domain_len);
-				pos += domain_len;
+					memcpy(&address.port, data + pos, sizeof(address.port));
+					pos += sizeof(address.port);
+				}
+				break;
+			case ss5_ipv6:
+				{
+					boost::asio::detail::array<unsigned char, 16> ipv6;
+					CHECK_DATA_LENGTH(dataLen, pos + sizeof(unsigned int) * 4 + sizeof(unsigned short));	//IPV6: 4*INT + SHORT
+					memcpy(ipv6.data(), data + pos, ipv6.size());
+					pos += ((uint32_t)ipv6.size());
 
-				memcpy(&address.port, data + pos, sizeof(address.port));
-				pos += sizeof(address.port);
-			}
-			break;
-		case ss5_ipv6:
-			{
-				boost::asio::detail::array<unsigned char, 16> ipv6;
-				CHECK_DATA_LENGTH(dataLen, pos + sizeof(unsigned int) * 4 + sizeof(unsigned short));	//IPV6: 4*INT + SHORT
-				memcpy(ipv6.data(), data + pos, ipv6.size());
-				pos += ((uint32_t)ipv6.size());
+					memcpy(&address.port, data + pos, sizeof(address.port));
+					pos += sizeof(address.port);
 
-				memcpy(&address.port, data + pos, sizeof(address.port));
-				pos += sizeof(address.port);
-
-				address.host = boost::asio::ip::address_v6(ipv6).to_string();
-			}
-			break;
-		default:
-			return err_protocol;
+					address.host = boost::asio::ip::address_v6(ipv6).to_string();
+				}
+				break;
+			default:
+				return err_protocol;
 		}
 
 		address.port = boost::asio::detail::socket_ops::network_to_host_short(address.port);
