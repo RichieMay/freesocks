@@ -388,7 +388,7 @@ private:
 			{
 				status_ = proxy_wait;						//等待 freesocks server 握手完成
 				client_->status_ = select_method_reply;
-				client_->client_ = boost::static_pointer_cast<client>(shared_from_this());
+				client_->client_ = boost::dynamic_pointer_cast<client>(shared_from_this());
 				client_->proxy_package_.resize(dataLen);
 				memcpy((boost::uint8_t*)&(client_->proxy_package_[0]), data, dataLen);
 
@@ -423,7 +423,7 @@ private:
 				if (bufLen == handle_send(buf, bufLen))
 				{
 					client_->status_ = status_ = proxy_body_repeat;
-					client_->client_ = boost::static_pointer_cast<client>(shared_from_this());
+					client_->client_ = boost::dynamic_pointer_cast<client>(shared_from_this());
 				}
 				else
 				{
