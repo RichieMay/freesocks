@@ -267,7 +267,7 @@ private:
 			case ss5_ipv6:
 				{
 					boost::asio::detail::array<unsigned char, 16> ipv6;
-					CHECK_DATA_LENGTH(dataLen, pos + sizeof(unsigned int) * 4 + sizeof(unsigned short));	//IPV6: 4*INT + SHORT
+					CHECK_DATA_LENGTH(dataLen, pos + sizeof(unsigned int) * 4 + sizeof(unsigned short));	//IPV6: 16 + SHORT
 					memcpy(ipv6.data(), data + pos, ipv6.size());
 					pos += ((uint32_t)ipv6.size());
 
