@@ -421,7 +421,11 @@ private:
 				if (bufLen == handle_send(buf, bufLen))
 				{
 					client_->status_ = status_ = proxy_body_repeat;
+#if BOOST_VERSION < 105900
 					client_->client_ = boost::dynamic_pointer_cast<client>(shared_from_this());
+#else
+					client_->client_ = boost::reinterpret_pointer_cast<client>(shared_from_this());
+#endif			
 				}
 				else
 				{
@@ -480,7 +484,7 @@ public:
 			("help,h", "help info") //多个参数 
 			("bind,b", boost::program_options::value<std::string>(), "bind ip:port,default:127.0.0.1:1080")
 			("conf,c", boost::program_options::value<std::string>(), "config file")
-			("key,k", boost::program_options::value<std::string>(), "key,max length 24 bit")
+			("key,k", boost::program_options::value<std::string>(), "secret key")
 			("server,s", boost::program_options::value<std::string>(), "server host:port");
 
 		try
@@ -635,7 +639,6 @@ int main(int argc, const char * argv[])
 	if (!_service->parse(argc, argv)) return 0;
 
 	boost::shared_ptr< xxtea_repeater > _repeater(new xxtea_repeater(_service->get_server_ip(), _service->get_server_port(), _service->get_key()));
-
 
 	boost::shared_ptr< server > _server(new server(_hive));
 	_server->listen(_service->get_listen_ip(), _service->get_listen_port());
