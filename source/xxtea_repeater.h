@@ -14,11 +14,11 @@ class xxtea_repeater : public repeater
 
 
 	/*
-	* ©°©¤©¤©¤¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª©´ 
-	* ©¦ 4 bytes  ©¦	   2 bytes	     ©¦ (srcLen+3)/4*4 bytes©¦	  4 bytes   ©¦
-	* ©¦©¤©¤¡ª¡ª©¤©¤©¤¡ª¡ª©¤©¤©¤¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª©¦
-	* ©¦   total  ©¦total length checksum©¦        source		©¦ source length©¦
-	* ©¸©¤©¤©¤¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª¡ª©¼
+	* â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â” 
+	* â”‚ 4 bytes  â”‚	     2 bytes	   â”‚ (srcLen+3)/4*4 bytes â”‚	 4 bytes    â”‚
+	* â”‚â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”‚
+	* â”‚   total  â”‚total length checksumâ”‚        source	  â”‚  source length  â”‚
+	* â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 	*/
 public:
 	xxtea_repeater(const std::string& proxy_host, boost::uint16_t proxy_port, const std::string& secret)
@@ -56,7 +56,7 @@ public:
 		boost::uint32_t cipherLen = dstLen - sizeof(boost::uint32_t) - sizeof(boost::uint16_t);
 		memcpy(p + cipherLen - sizeof(boost::uint32_t), &srcLen, sizeof(boost::uint32_t)); //source length 
 
-		boost::int32_t n = cipherLen / sizeof(boost::uint32_t);//exclude srcLen¡¢checksum
+		boost::int32_t n = cipherLen / sizeof(boost::uint32_t);//exclude srcLenã€checksum
 		btea((boost::uint32_t*)p, n, key_);
 
 		return srcLen;
@@ -77,13 +77,13 @@ public:
 		}
 
 		boost::uint32_t cipherLen = totalLen - sizeof(boost::uint32_t) - sizeof(boost::uint16_t);
-		*dst = new boost::uint8_t[cipherLen]; //exclude srcLen¡¢checksum
+		*dst = new boost::uint8_t[cipherLen]; //exclude srcLenã€checksum
 		boost::uint8_t* p = *dst;
 
 		src += ((sizeof(boost::uint32_t) + sizeof(boost::uint16_t)));
 		memcpy(p, src, cipherLen); //copy cipher
 
-		boost::int32_t n = cipherLen / sizeof(boost::uint32_t);//exclude srcLen¡¢checksum
+		boost::int32_t n = cipherLen / sizeof(boost::uint32_t);//exclude srcLenã€checksum
 		btea((boost::uint32_t*)p, -n, key_);
 		
 		p += (cipherLen - sizeof(boost::uint32_t));
