@@ -388,11 +388,7 @@ private:
 			{
 				status_ = proxy_wait;						//等待 freesocks server 握手完成
 				client_->status_ = select_method_reply;
-#if BOOST_VERSION < 105900
-				client_->client_ = boost::dynamic_pointer_cast<client>(shared_from_this());
-#else
-				client_->client_ = boost::reinterpret_pointer_cast<client>(shared_from_this());
-#endif
+				client_->client_ = boost::static_pointer_cast<client>(shared_from_this());
 				client_->proxy_package_.resize(dataLen);
 				memcpy((boost::uint8_t*)&(client_->proxy_package_[0]), data, dataLen);
 
@@ -427,11 +423,7 @@ private:
 				if (bufLen == handle_send(buf, bufLen))
 				{
 					client_->status_ = status_ = proxy_body_repeat;
-#if BOOST_VERSION < 105900
-					client_->client_ = boost::dynamic_pointer_cast<client>(shared_from_this());
-#else
-					client_->client_ = boost::reinterpret_pointer_cast<client>(shared_from_this());
-#endif			
+					client_->client_ = boost::static_pointer_cast<client>(shared_from_this());
 				}
 				else
 				{
@@ -453,11 +445,7 @@ class server : public acceptor
 private:
 	bool on_accept(const boost::shared_ptr< connection > connection)
 	{
-#if BOOST_VERSION < 105900
-		boost::shared_ptr< client > cli = boost::dynamic_pointer_cast< client >(connection);
-#else
-		boost::shared_ptr< client > cli = boost::reinterpret_pointer_cast< client >(connection);
-#endif
+		boost::shared_ptr< client > cli = boost::static_pointer_cast< client >(connection);
 		accept(boost::shared_ptr< client >(new client(cli->get_hive(), cli->get_repeater(), cli->get_mode())));
 		return true;
 	}
