@@ -445,7 +445,7 @@ class server : public acceptor
 private:
 	bool on_accept(const boost::shared_ptr< connection > connection)
 	{
-		boost::shared_ptr< client > cli = boost::static_pointer_cast< client >(connection);
+		boost::shared_ptr< client > cli = boost::dynamic_pointer_cast< client >(connection);
 		accept(boost::shared_ptr< client >(new client(cli->get_hive(), cli->get_repeater(), cli->get_mode())));
 		return true;
 	}
