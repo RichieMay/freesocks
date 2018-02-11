@@ -72,21 +72,21 @@ private:
 			boost::uint32_t dstLen = length - recv_used;
 
 			boost::int32_t decrypt_used = length - recv_used;
-			if (mode_ == freesocks) //freesocks client / serverµÄÊı¾İĞèÒª½âÂë
+			if (mode_ == freesocks) //freesocks client / serverçš„æ•°æ®éœ€è¦è§£ç 
 			{
 				decrypt_used = repeater_->decrypt(buffer + recv_used, length - recv_used, &dst, dstLen);
 			}
 
-			if (decrypt_used == err_no_more) //Êı¾İ²»×ã
+			if (decrypt_used == err_no_more) //æ•°æ®ä¸è¶³
 			{
 				no_error = false;
 			}
-			else if (decrypt_used < err_success) //½âÂë³ö´í
+			else if (decrypt_used < err_success) //è§£ç å‡ºé”™
 			{
 				no_error = false;
 				disconnect();
 			}
-			else //½âÂë³É¹¦²¢ÇÒ·µ»ØÒÑÊ¹ÓÃµÄÊı¾İ³¤¶È
+			else //è§£ç æˆåŠŸå¹¶ä¸”è¿”å›å·²ä½¿ç”¨çš„æ•°æ®é•¿åº¦
 			{
 				int ret = handle_parse_packet(dst, dstLen);
 				if (err_success != ret)
@@ -129,7 +129,7 @@ private:
 		boost::uint32_t dstLen = length;
 		boost::int32_t ret = 0;
 
-		if (mode_ == freesocks) //freesocks client / serverµÄÊı¾İĞèÒª±àÂë
+		if (mode_ == freesocks) //freesocks client / serverçš„æ•°æ®éœ€è¦ç¼–ç 
 		{
 			ret = repeater_->encrypt(buffer, length, &dst, dstLen);
 		}
@@ -209,7 +209,7 @@ private:
 			return err_protocol;
 		}
 		
-		//·¢Æğ´úÀíÇëÇó
+		//å‘èµ·ä»£ç†è¯·æ±‚
 		if ((uint32_t)proxy_package_.size() != handle_send(proxy_package_.data(), (uint32_t)proxy_package_.size()))
 		{
 			return err_unknown;
@@ -304,14 +304,11 @@ private:
 			return err_protocol;
 		}
 
-		dataLen = response->atyp == ss5_ipv4 ? 10 : 22;
-
-		//»Ø¸´BIND IP PORT
-		boost::uint8_t buf[22] = { 0 }, bufLen = 10;//Ä¬ÈÏ Í· + IPV4 +PORT
+		//å›å¤BIND IP PORT
+		boost::uint8_t buf[22] = { 0 }, bufLen = 0;//å¤´ + IPV4/IPV6 + PORT
 		response = (ss5_proxy_response*)buf;
 		response->ver = 0x05;
 		response->rsv = 0x00;
-		response->atyp = ss5_ipv4;
 
 		boost::asio::ip::address addr = boost::asio::ip::address::from_string(local_ip_);
 		boost::uint16_t port = boost::asio::detail::socket_ops::host_to_network_short(local_port_);
@@ -338,7 +335,6 @@ private:
 		}
 		else
 		{
-			disconnect();
 			return err_unknown;
 		}
 	}
@@ -374,7 +370,7 @@ private:
 			}
 		}
 
-		boost::uint8_t buf[22] = { 0 }, bufLen = 10;//Ä¬ÈÏ Í· + IPV4 +PORT
+		boost::uint8_t buf[22] = { 0 }, bufLen = 10;//å¤´ + IPV4/IPV6 + PORT
 		ss5_proxy_response* response = (ss5_proxy_response*)buf;
 		response->ver = 0x05;
 		response->rsv = 0x00;
@@ -384,7 +380,7 @@ private:
 		{
 			if (client_->mode_ == freesocks)
 			{
-				status_ = proxy_wait;						//µÈ´ı freesocks server ÎÕÊÖÍê³É
+				status_ = proxy_wait;						//ç­‰å¾… freesocks server æ¡æ‰‹å®Œæˆ
 				client_->status_ = select_method_reply;
 #if BOOST_VERSION < 105900
 				client_->client_ = boost::dynamic_pointer_cast<client>(shared_from_this());
@@ -395,7 +391,7 @@ private:
 				memcpy((boost::uint8_t*)&(client_->proxy_package_[0]), data, dataLen);
 
 				boost::uint8_t request[3] = {0x05, 0x01, 0x00};
-				if (3 != client_->handle_send(request, 3)) //¿ªÊ¼Óëfreesocks serverÎÕÊÖ
+				if (3 != client_->handle_send(request, 3)) //å¼€å§‹ä¸freesocks serveræ¡æ‰‹
 				{
 					disconnect();
 				}
@@ -481,7 +477,7 @@ public:
 	{
 		boost::program_options::options_description opts("freesocks options");
 		opts.add_options()
-			("help,h", "help info") //¶à¸ö²ÎÊı 
+			("help,h", "help info") //å¤šä¸ªå‚æ•° 
 			("bind,b", boost::program_options::value<std::string>(), "bind ip:port,default:127.0.0.1:1080")
 			("conf,c", boost::program_options::value<std::string>(), "config file")
 			("key,k", boost::program_options::value<std::string>(), "key,max length 24 bit")
