@@ -222,7 +222,8 @@ private:
 		return err_success;
 	}
 
-	boost::int32_t handle_parse_proxy_request(boost::uint8_t* data, boost::uint32_t dataLen) {
+	boost::int32_t handle_parse_proxy_request(boost::uint8_t* data, boost::uint32_t dataLen)
+	{
 		boost::uint32_t pos = 0;
 		CHECK_DATA_LENGTH(dataLen, sizeof(ss5_proxy_request));
 		ss5_proxy_request* request = (ss5_proxy_request*)(data + pos);
