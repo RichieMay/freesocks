@@ -104,7 +104,8 @@ private:
 		memcpy(key_, md5.byte_digest(), sizeof(key_));
 	}
 
-	void btea(boost::uint32_t *v, boost::int32_t n, boost::uint32_t* key) {
+	void btea(boost::uint32_t *v, boost::int32_t n, boost::uint32_t* key)
+	{
 		boost::uint32_t y, z, sum, DELTA = 0x9e3779b9;
 		boost::int32_t p, r, e;
 		if (n > 1) 
