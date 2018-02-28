@@ -1,3 +1,4 @@
 *.js linguist-language=C++
+*.pac linguist-language=C++
 *.css linguist-language=C++
 *.html linguist-language=C++
