@@ -7,7 +7,7 @@ proxy for me.
 
 # Installation
 
-#### Build from source with centos
+## Build from source with centos
 
 ### Installation of basic build dependencies
 
