@@ -62,6 +62,6 @@ If you are using Mac OS,
 ```bash
 cd freesocks-master
 mkdir build && cd build
-cmake .. -DBOOST_INCLUDEDIR=/usr/local/Cellar/boost\@1.60/1.60.0/include -DBOOST_LIBRARYDIR=/usr/local/Cellar/boost\@1.60/1.60.0/lib
+cmake .. -DBOOST_ROOT=/usr/local/Cellar/boost\@1.60/1.60.0
 make
 ```
