@@ -58,7 +58,7 @@ cmake ..
 make
 ```
 
-If you are using Mac OS,
+If you are using Mac OS:
 ```bash
 cd freesocks-master
 mkdir build && cd build
