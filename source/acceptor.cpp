@@ -62,6 +62,10 @@ void acceptor::handle_accept(const boost::system::error_code & error, const boos
 		{
 			connection->do_accept(shared_from_this());
 		}
+		else
+		{
+			connection->disconnect();
+		}
 	}
 }
 

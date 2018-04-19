@@ -16,11 +16,11 @@ class client : public connection
 {
 	enum status { select_method, proxy_wait, proxy_request, proxy_request_reply, proxy_body_repeat };
 public:
-	enum mode { socks, freesocks };
+	enum mode { socks, redsocks, freesocks };
 
 	client(boost::shared_ptr< hive > hive, boost::shared_ptr< repeater > repeater, mode type)
-		: connection(hive), local_ip_("0.0.0.0"),local_port_(0), repeater_(repeater), mode_(type)
-		, status_(type == freesocks ? proxy_request : select_method)
+		: connection(hive), local_ip_("0.0.0.0"), local_port_(0), repeater_(repeater), mode_(type)
+		, status_(type != socks ? proxy_request : select_method)
 	{
 
 	}
@@ -47,7 +47,56 @@ private:
 
 	void on_accept(const boost::shared_ptr< acceptor > acceptor)
 	{
-	
+		if (mode_ == redsocks)
+		{
+			struct sockaddr_storage addr_storage;
+			socklen_t addr_len = sizeof(addr_storage);
+			int ret = 0, fd = get_socket().native_handle();
+#ifdef __linux__
+			ret = getsockopt(fd, SOL_IP, SO_ORIGINAL_DST, &addr_storage, &addr_len);
+#elif _WIN32
+			ret = getpeername(fd, (struct sockaddr *) &addr_storage, &addr_len);
+#endif
+			if (0 != ret)
+			{
+				disconnect();
+				return;
+			}
+
+			struct sockaddr* addr = (struct sockaddr *) &addr_storage;
+			boost::uint8_t request[22] = { 0x05, 0x01, 0x00, ss5_ipv4 };
+			boost::uint32_t request_len = sizeof(request);
+			if (addr->sa_family == AF_INET)
+			{
+				request[3] = ss5_ipv4;
+				struct sockaddr_in* addr_v4 = (struct sockaddr_in*)addr;
+				boost::uint32_t* addr_v4_ip = (boost::uint32_t*)(request + sizeof(ss5_proxy_request));
+				*addr_v4_ip = (boost::uint32_t)addr_v4->sin_addr.s_addr;
+
+				boost::uint16_t* addr_v4_port = (boost::uint16_t*)(request + sizeof(ss5_proxy_request) + sizeof(boost::uint32_t));
+				*addr_v4_port = addr_v4->sin_port;
+
+				request_len = sizeof(ss5_proxy_request) + sizeof(boost::uint32_t) + sizeof(boost::uint16_t);
+			}
+			else if (addr->sa_family == AF_INET6)
+			{
+				request[3] = ss5_ipv6;
+				struct sockaddr_in6* addr_v6 = (struct sockaddr_in6*)addr;
+				memcpy(request + sizeof(ss5_proxy_request), addr_v6->sin6_addr.s6_addr, sizeof(addr_v6->sin6_addr.s6_addr));
+
+				boost::uint16_t* addr_v6_port = (boost::uint16_t*)(request + sizeof(ss5_proxy_request) + sizeof(addr_v6->sin6_addr.s6_addr));
+				*addr_v6_port = addr_v6->sin6_port;
+
+				request_len = sizeof(ss5_proxy_request) + sizeof(addr_v6->sin6_addr.s6_addr) + sizeof(boost::uint16_t);
+			}
+			else
+			{
+				disconnect();
+				return;
+			}
+
+			handle_parse_proxy_request(request, request_len);
+		}
 	}
 
 	void on_connect()
@@ -66,7 +115,7 @@ private:
 		bool no_error = true;
 		boost::uint32_t recv_used = 0;
 
-		do 
+		do
 		{
 			boost::uint8_t* dst = buffer + recv_used;
 			boost::uint32_t dstLen = length - recv_used;
@@ -143,7 +192,7 @@ private:
 		{
 			repeater_->release(dst);
 		}
-		
+
 		if (ret != dstLen)
 		{
 			return 0;
@@ -156,16 +205,18 @@ private:
 	{
 		switch (status_)
 		{
-			case select_method:
-				return handle_parse_select_method(data, dataLen);
-			case proxy_request:
-				return handle_parse_proxy_request(data, dataLen);
-			case proxy_body_repeat:
-				return handle_parse_proxy_content(data, dataLen);
-			case proxy_request_reply:
-				return handle_parse_proxy_request_reply(data, dataLen);
-			default:
-				return err_unsupported;
+		case select_method:
+			return handle_parse_select_method(data, dataLen);
+		case proxy_request:
+			return handle_parse_proxy_request(data, dataLen);
+		case proxy_body_repeat:
+			return handle_parse_proxy_content(data, dataLen);
+		case proxy_request_reply:
+			return handle_parse_proxy_request_reply(data, dataLen);
+		case proxy_wait:
+			return handle_parse_proxy_wait(data, dataLen);
+		default:
+			return err_unsupported;
 		}
 	}
 
@@ -174,7 +225,7 @@ private:
 		CHECK_DATA_LENGTH(dataLen, sizeof(ss5_select_request));
 		ss5_select_request* request = (ss5_select_request*)data;
 		if (request->ver != 0x05) //SOCKS5 version=0x05
-		{	
+		{
 			return err_protocol;
 		}
 
@@ -183,7 +234,7 @@ private:
 		for (unsigned int i = 0; i < request->nmethods; i++)
 		{
 			if (request->methods[i] == 0x00) //SOCKS5 no auth
-			{	
+			{
 				ss5_select_response response;
 				response.ver = request->ver;
 				response.method = request->methods[i];
@@ -205,7 +256,7 @@ private:
 		boost::uint32_t pos = 0;
 		CHECK_DATA_LENGTH(dataLen, sizeof(ss5_proxy_request));
 		ss5_proxy_request* request = (ss5_proxy_request*)(data + pos);
-		if (request->ver != 0x05 || request->rsv != 0x00) 
+		if (request->ver != 0x05 || request->rsv != 0x00)
 		{
 			return err_protocol;
 		}
@@ -310,22 +361,23 @@ private:
 			memcpy(buf + sizeof(ss5_proxy_response) + 16, &port, sizeof(boost::uint16_t));
 		}
 
-		if (bufLen == client_->handle_send(buf, bufLen))
+		if (client_->mode_ != redsocks)
 		{
-			client_->status_ = status_ = proxy_body_repeat;
-			return err_success;
+			if (bufLen != client_->handle_send(buf, bufLen))
+			{
+				return err_unknown;
+			}
 		}
-		else
-		{
-			return err_unknown;
-		}
+
+		client_->status_ = status_ = proxy_body_repeat;
+		return err_success;
 	}
 
 	boost::int32_t handle_parse_proxy_content(boost::uint8_t* data, boost::uint32_t dataLen)
 	{
 		if (client_)
 		{
-			if (dataLen != client_->handle_send(data, dataLen)) 
+			if (dataLen != client_->handle_send(data, dataLen))
 			{
 				return err_unknown;
 			}
@@ -334,23 +386,39 @@ private:
 		return err_success;
 	}
 
+	boost::int32_t handle_parse_proxy_wait(boost::uint8_t* data, boost::uint32_t dataLen)
+	{
+		if (mode_ == redsocks)//透明代理模式允许缓存,但数据不宜超过10K。
+		{
+			return dataLen >= 10 * 1024 ? err_cache_too_large : err_no_more;
+		}
+		else
+		{
+			return err_protocol;
+		}
+	}
+
 	void handle_parse_cmd_connect(boost::uint8_t* data, boost::uint32_t dataLen, const ss5_porxy_address* address)
 	{
 		ss5_porxy_address proxy_address = *address;
 		if (mode_ == freesocks) //freesocks client
 		{
-			client_.reset(new client(get_hive(), repeater_, socks));////freesocks client, freesocks server
+			client_.reset(new client(get_hive(), repeater_, socks));//freesocks client, freesocks server
 		}
 		else //socks
 		{
 			repeater_->repeat(address->host, address->port, proxy_address.host, proxy_address.port);
 			if (address->host != proxy_address.host || address->port != proxy_address.port)
 			{
-				client_.reset(new client(get_hive(), repeater_, freesocks));////freesocks client, freesocks server
+				client_.reset(new client(get_hive(), repeater_, freesocks));//freesocks client, freesocks server
+			}
+			else if(mode_ == socks)
+			{
+				client_.reset(new client(get_hive(), repeater_, socks));//freesocks client, freesocks server
 			}
 			else
 			{
-				client_.reset(new client(get_hive(), repeater_, socks));////freesocks client, freesocks server
+				return disconnect();
 			}
 		}
 
@@ -372,7 +440,7 @@ private:
 					disconnect();
 				}
 			}
-			else
+			else if(client_->mode_ == socks)
 			{
 				response->rep = 0x00;//succeeded
 
@@ -404,6 +472,10 @@ private:
 					disconnect();
 				}
 			}
+			else //unreachable block
+			{
+				disconnect();
+			}
 		}
 		else
 		{
@@ -419,7 +491,7 @@ class server : public acceptor
 private:
 	bool on_accept(const boost::shared_ptr< connection > connection)
 	{
-		boost::shared_ptr< client > cli = boost::dynamic_pointer_cast< client >(connection);
+		boost::shared_ptr< client > cli = boost::dynamic_pointer_cast<client>(connection);
 		accept(boost::shared_ptr< client >(new client(cli->get_hive(), cli->get_repeater(), cli->get_mode())));
 		return true;
 	}
@@ -440,7 +512,7 @@ class service : public boost::enable_shared_from_this< service >
 {
 public:
 	service(boost::shared_ptr< hive > hive)
-	: hive_(hive), listen_ip_("127.0.0.1"), listen_port_(1080)
+		: hive_(hive), listen_ip_("127.0.0.1"), listen_port_(1080), redirect_(false)
 	{
 
 	}
@@ -449,7 +521,10 @@ public:
 	{
 		boost::program_options::options_description opts("freesocks options");
 		opts.add_options()
-			("help,h", "help info") //多个参数 
+			("help,h", "help info") //多个参数
+#ifdef __linux__
+			("redir,r", "redirect mode")
+#endif
 			("bind,b", boost::program_options::value<std::string>(), "bind ip:port,default:127.0.0.1:1080")
 			("conf,c", boost::program_options::value<std::string>(), "config file")
 			("key,k", boost::program_options::value<std::string>(), "secret key")
@@ -493,6 +568,18 @@ public:
 				key_ = vm["key"].as<std::string>();
 			}
 
+#ifdef __linux__
+			if (vm.count("redir"))
+			{	
+				if (!vm.count("server"))
+				{
+					std::cout << "redirect mode should config server" << std::endl;
+					return false;
+				}
+
+				redirect_ = true;
+			}
+#endif
 			if (vm.count("server"))
 			{
 				std::string server_ip_port = vm["server"].as<std::string>();
@@ -508,7 +595,7 @@ public:
 					return false;
 				}
 			}
-			
+
 			return true;
 		}
 		catch (...) {
@@ -522,19 +609,20 @@ public:
 	{
 		boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
 		std::cout << "[" << boost::gregorian::to_iso_extended_string(now.date()) << " " << now.time_of_day()
-			<< (is_server_mode() ? "] freesocks server started " : "] freesocks client started ")
+			<< (is_server_mode() ? "] freesocks server started " :
+			(is_redirect_mode() ? "] freesocks redirect started " :"] freesocks client started "))
 			<< listen_ip_ << ":" << listen_port_ << std::endl;
 
 		boost::thread_group thread_group_;
 		size_t cpu_num = boost::thread::hardware_concurrency();
 		size_t _threads_num = cpu_num * 2;
-		for (size_t i = 0; i < _threads_num; i++) 
+		for (size_t i = 0; i < _threads_num; i++)
 		{
 			thread_group_.create_thread(boost::bind(&hive::run, hive_));
 		}
 
 		boost::asio::signal_set signals(hive_->get_io_service(), SIGINT, SIGTERM);
-		signals.async_wait(boost::bind(&service::handler, shared_from_this(), _1, _2));
+		signals.async_wait(boost::bind(&service::handler_signal, shared_from_this(), _1, _2));
 
 		thread_group_.join_all();
 		return 0;
@@ -543,6 +631,10 @@ public:
 	bool is_server_mode() const
 	{
 		return server_ip_.empty();
+	}
+
+	bool is_redirect_mode() const {
+		return redirect_;
 	}
 
 	std::string get_key() const
@@ -576,22 +668,27 @@ private:
 		boost::property_tree::ptree reader;
 		boost::property_tree::json_parser::read_json(conf, reader);
 		key_ = reader.get<std::string>("key", key_);
+#ifdef __linux__
+		redirect_ = reader.get<bool>("redirect", redirect_);
+#endif
 		listen_ip_ = reader.get<std::string>("listen_ip", listen_ip_);
 		listen_port_ = reader.get<boost::uint16_t>("listen_port", listen_port_);
 		server_ip_ = reader.get<std::string>("server_ip", server_ip_);
 		server_port_ = reader.get<boost::uint16_t>("server_port", server_port_);
 	}
 
-	void handler(boost::system::error_code error, int signal_number)
+	void handler_signal(boost::system::error_code error, int signal_number)
 	{
 		hive_->stop();
 
 		boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
 		std::cout << "[" << boost::gregorian::to_iso_extended_string(now.date()) << " " << now.time_of_day()
-			<< (is_server_mode() ? "] freesocks server stopped" : "] freesocks client stopped") << std::endl;
+			<< (is_server_mode() ? "] freesocks server stopped" :
+			(is_redirect_mode() ? "] freesocks redirect started " : "] freesocks client started ")) << std::endl;
 	}
 
 private:
+	bool redirect_;
 	std::string key_;
 	std::string listen_ip_;
 	std::string server_ip_;
@@ -604,7 +701,7 @@ int main(int argc, const char * argv[])
 {
 	boost::shared_ptr< hive > _hive(new hive());
 	boost::shared_ptr< service > _service(new service(_hive));
-	if (!_service->parse(argc, argv)) 
+	if (!_service->parse(argc, argv))
 	{
 		return 0;
 	}
@@ -613,7 +710,8 @@ int main(int argc, const char * argv[])
 
 	boost::shared_ptr< server > _server(new server(_hive));
 	_server->listen(_service->get_listen_ip(), _service->get_listen_port());
-	_server->accept(boost::shared_ptr< client >(new client(_hive, _repeater, _service->is_server_mode() ? client::freesocks : client::socks)));
+	_server->accept(boost::shared_ptr< client >(new client(_hive, _repeater, _service->is_server_mode() ? client::freesocks : 
+		(_service->is_redirect_mode() ? client::redsocks : client::socks))));
 
 	return _service->run();
 }
