@@ -1,0 +1,22 @@
+#向NAT表添加新规则链FREESOCKS
+iptables -t nat -N FREESOCKS
+
+#放开发往freesocks server的数据包
+iptables -t nat -A FREESOCKS -p tcp -d ${freesocks_server_ip} --dport ${freesocks_server_port} -j RETURN
+
+#放开内网的数据包
+iptables -t nat -A FREESOCKS -d 0.0.0.0/8 -j RETURN
+iptables -t nat -A FREESOCKS -d 127.0.0.0/8 -j RETURN
+iptables -t nat -A FREESOCKS -d 192.168.0.0/16 -j RETURN
+iptables -t nat -A FREESOCKS -d 224.0.0.0/4 -j RETURN
+iptables -t nat -A FREESOCKS -d 240.0.0.0/4 -j RETURN
+
+#将所有FREESOCKS规则链的数据重定向到透明代理端口
+iptables -t nat -A FREESOCKS -p tcp -j REDIRECT --to-ports ${freesocks_redirect_port}
+
+#将OUTPUT的tcp流量全部跳转FREESOCKS规则链
+#如是在openwrt上实现透明代理的话,使用该规则
+iptables -t nat -I PREROUTING -p tcp -j FREESOCKS
+
+#如是在个人电脑上实现透明代理的话,使用该规则
+iptables -t nat -A OUTPUT -p tcp -j FREESOCKS
