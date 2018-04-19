@@ -14,12 +14,13 @@ if (dl < nl) {\
 
 class client : public connection
 {
-	enum status { select_method, select_method_reply, proxy_wait, proxy_request, proxy_request_reply, proxy_body_repeat };
+	enum status { select_method, proxy_wait, proxy_request, proxy_request_reply, proxy_body_repeat };
 public:
 	enum mode { socks, freesocks };
 
 	client(boost::shared_ptr< hive > hive, boost::shared_ptr< repeater > repeater, mode type)
-		: connection(hive), status_(select_method), local_ip_("0.0.0.0"),local_port_(0), repeater_(repeater), mode_(type)
+		: connection(hive), local_ip_("0.0.0.0"),local_port_(0), repeater_(repeater), mode_(type)
+		, status_(type == freesocks ? proxy_request : select_method)
 	{
 
 	}
@@ -41,7 +42,6 @@ private:
 	boost::uint16_t local_port_;
 	boost::shared_ptr< client > client_;
 	boost::shared_ptr< repeater > repeater_;
-	std::vector <boost::uint8_t> proxy_package_;
 
 private:
 
@@ -162,8 +162,6 @@ private:
 				return handle_parse_proxy_request(data, dataLen);
 			case proxy_body_repeat:
 				return handle_parse_proxy_content(data, dataLen);
-			case select_method_reply:
-				return handle_parse_select_method_reply(data, dataLen);
 			case proxy_request_reply:
 				return handle_parse_proxy_request_reply(data, dataLen);
 			default:
@@ -186,8 +184,6 @@ private:
 		{
 			if (request->methods[i] == 0x00) //SOCKS5 no auth
 			{	
-				status_ = proxy_request;
-
 				ss5_select_response response;
 				response.ver = request->ver;
 				response.method = request->methods[i];
@@ -196,30 +192,12 @@ private:
 					return err_unknown;
 				}
 
+				status_ = proxy_request;
 				return err_success;
 			}
 		}
 
 		return err_unsupported;
-	}
-
-	boost::int32_t handle_parse_select_method_reply(boost::uint8_t* data, boost::uint32_t dataLen)
-	{
-		CHECK_DATA_LENGTH(dataLen, sizeof(ss5_select_response));
-		ss5_select_response* response = (ss5_select_response*)data;
-		if (response->ver != 0x05 || response->method != 0x00)
-		{
-			return err_protocol;
-		}
-		
-		//发起代理请求
-		if ((uint32_t)proxy_package_.size() != handle_send(proxy_package_.data(), (uint32_t)proxy_package_.size()))
-		{
-			return err_unknown;
-		}
-
-		status_ = proxy_request_reply;
-		return err_success;
 	}
 
 	boost::int32_t handle_parse_proxy_request(boost::uint8_t* data, boost::uint32_t dataLen)
@@ -386,14 +364,10 @@ private:
 		{
 			if (client_->mode_ == freesocks)
 			{
-				status_ = proxy_wait;						//等待 freesocks server 握手完成
-				client_->status_ = select_method_reply;
+				status_ = proxy_wait;//等待 freesocks server 响应
+				client_->status_ = proxy_request_reply;
 				client_->client_ = boost::dynamic_pointer_cast<client>(shared_from_this());
-				client_->proxy_package_.resize(dataLen);
-				memcpy((boost::uint8_t*)&(client_->proxy_package_[0]), data, dataLen);
-
-				boost::uint8_t request[3] = {0x05, 0x01, 0x00};
-				if (3 != client_->handle_send(request, 3)) //开始与freesocks server握手
+				if (dataLen != client_->handle_send(data, dataLen)) //向 freesocks server 发送代理请求
 				{
 					disconnect();
 				}
