@@ -47,16 +47,16 @@ private:
 
 	void on_accept(const boost::shared_ptr< acceptor > acceptor)
 	{
+#ifdef __linux__
+#ifndef SO_ORIGINAL_DST
+	#define SO_ORIGINAL_DST 80
+#endif
 		if (mode_ == redsocks)
 		{
 			struct sockaddr_storage addr_storage;
 			socklen_t addr_len = sizeof(addr_storage);
-			int ret = 0, fd = get_socket().native_handle();
-#ifdef __linux__
-			ret = getsockopt(fd, SOL_IP, SO_ORIGINAL_DST, &addr_storage, &addr_len);
-#elif _WIN32
-			ret = getpeername(fd, (struct sockaddr *) &addr_storage, &addr_len);
-#endif
+			int ret = getsockopt(get_socket().native_handle(), SOL_IP, SO_ORIGINAL_DST, &addr_storage, &addr_len);
+			//ret = getpeername(fd, (struct sockaddr *) &addr_storage, &addr_len);
 			if (0 != ret)
 			{
 				disconnect();
@@ -97,6 +97,7 @@ private:
 
 			handle_parse_proxy_request(request, request_len);
 		}
+#endif
 	}
 
 	void on_connect()
@@ -388,9 +389,9 @@ private:
 
 	boost::int32_t handle_parse_proxy_wait(boost::uint8_t* data, boost::uint32_t dataLen)
 	{
-		if (mode_ == redsocks)//透明代理模式允许缓存,但数据不宜超过10K。
+		if (mode_ == redsocks)//透明代理模式继续发送数据即可
 		{
-			return dataLen >= 10 * 1024 ? err_cache_too_large : err_no_more;
+			return handle_parse_proxy_content(data, dataLen);
 		}
 		else
 		{

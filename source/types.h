@@ -49,7 +49,6 @@ enum error_code {
 	err_protocol = -2,
 	err_auth = -3,
 	err_unsupported = -4,
-	err_cache_too_large = -5,
 	err_unknown = -6
 };
 #endif
