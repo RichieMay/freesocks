@@ -25,7 +25,7 @@ yum install epel-release -y
 yum install unzip wget cmake gcc gcc-c++ boost-devel -y
 ```
 
-If you are using Mac OS,
+If you are using Mac OS:
 ```bash
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 brew install wget boost@1.60 cmake gcc
