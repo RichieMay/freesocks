@@ -16,7 +16,7 @@ boost version <= 1.65
 If you are using CentOS 6.x, you need to install these prequirement to build from source code:
 ```bash
 yum install epel-release -y
-yum install unzip wget cmake gcc gcc-c++ boost148-static -y
+yum install unzip wget cmake gcc gcc-c++ boost148-devel -y
 ```
 
 If you are using CentOS 7.x：
