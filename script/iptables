@@ -5,14 +5,14 @@ iptables -t nat -N FREESOCKS
 iptables -t nat -A FREESOCKS -p tcp -d ${freesocks_server_ip} --dport ${freesocks_server_port} -j RETURN
 
 #放开内网的数据包
-iptables -t nat -A SHADOWSOCKS -d 0.0.0.0/8 -j RETURN
-iptables -t nat -A SHADOWSOCKS -d 10.0.0.0/8 -j RETURN
-iptables -t nat -A SHADOWSOCKS -d 127.0.0.0/8 -j RETURN
-iptables -t nat -A SHADOWSOCKS -d 169.254.0.0/16 -j RETURN
-iptables -t nat -A SHADOWSOCKS -d 172.16.0.0/12 -j RETURN
-iptables -t nat -A SHADOWSOCKS -d 192.168.0.0/16 -j RETURN
-iptables -t nat -A SHADOWSOCKS -d 224.0.0.0/4 -j RETURN
-iptables -t nat -A SHADOWSOCKS -d 240.0.0.0/4 -j RETURN
+iptables -t nat -A FREESOCKS -d 0.0.0.0/8 -j RETURN
+iptables -t nat -A FREESOCKS -d 10.0.0.0/8 -j RETURN
+iptables -t nat -A FREESOCKS -d 127.0.0.0/8 -j RETURN
+iptables -t nat -A FREESOCKS -d 169.254.0.0/16 -j RETURN
+iptables -t nat -A FREESOCKS -d 172.16.0.0/12 -j RETURN
+iptables -t nat -A FREESOCKS -d 192.168.0.0/16 -j RETURN
+iptables -t nat -A FREESOCKS -d 224.0.0.0/4 -j RETURN
+iptables -t nat -A FREESOCKS -d 240.0.0.0/4 -j RETURN
 
 #将所有FREESOCKS规则链的数据重定向到透明代理端口
 iptables -t nat -A FREESOCKS -p tcp -j REDIRECT --to-ports ${freesocks_redirect_port}
