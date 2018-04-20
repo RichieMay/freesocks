@@ -9,9 +9,9 @@ project (freesocks)
 #set(CMAKE_CXX_COMPILER mipsel-mt7621-linux-g++)
 
 # 检查boost是否存在
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_MULTITHREADED ON)
-set(Boost_USE_STATIC_RUNTIME OFF)
+#set(Boost_USE_STATIC_LIBS ON)
+#set(Boost_USE_MULTITHREADED ON)
+#set(Boost_USE_STATIC_RUNTIME OFF)
 find_package( Boost REQUIRED COMPONENTS regex thread system chrono date_time program_options)
 if(Boost_FOUND)
 	include_directories(${Boost_INCLUDE_DIRS})
