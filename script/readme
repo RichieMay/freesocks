@@ -1,0 +1,15 @@
+openwrt安装freesocks进行透明代理说明
+1、安装 dnsmasq-full（卸载原dnsmasq,不支持ipset）、ipset、iptables-mod-nat-extra
+2、安装 dnscrypt
+  2.1 增加opkg仓库源
+    echo 'src/gz exopenwrt http://exopenwrt.roland.black/barrier_breaker/14.07/ar71xx/packages/exopenwrt' >> /etc/opkg.conf
+  2.2 配置
+    vi etc/config/dnscrypt-proxy
+3、在dnsmasq.d/中增加gfwlist_ipset.conf （DNS代理IP以及端口与dnscrypt的配置一致）
+4、编译源码安装freesocks （配置的listen_ip必须为路由器的网关IP或者0.0.0.0）
+5、启动dnsmasq、dnscrypt、freesocks
+6、增加iptables对ipset列表的转发
+  注意：set列表名gfwlist与dnsmasq的ipset配置文件中表名必须一致、端口与freesocks透明代理模式端口一致
+  ipset -N gfwlist iphash
+  iptables -t nat -A PREROUTING -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-port 1080
+  将上面两条命令根据实际情况修改后增加到/etc/firewall.user

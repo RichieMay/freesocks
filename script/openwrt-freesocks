@@ -1,0 +1,82 @@
+#!/bin/sh /etc/rc.common
+#
+# Copyright (C) 2018 openwrt-freesocks
+#
+# This is free software, licensed under the GNU General Public License v3.
+# See /LICENSE for more information.
+#
+
+START=20
+STOP=15
+EXTRA_COMMANDS="status"
+EXTRA_HELP="	status	show the service status"
+
+NAME=freesocks
+BIN=freesocks
+CONF=/var/etc/${NAME}.json
+RETVAL=0
+  
+boot() {
+  start
+}
+
+check_running(){
+    PID=`ps | grep -v grep | grep -i "${BIN}.\+-" | awk '{print $1}'`
+    if [ ! -z "$PID" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+status(){
+    check_running
+    if [ $? -eq 0 ]; then
+        echo "$NAME (pid $PID) is running..."
+    else
+        echo "$NAME is stopped"
+        RETVAL=1
+    fi
+}
+
+restart () {
+  stop
+  start
+}
+
+start() {
+  if [ ! -r $CONF ]; then
+      echo "file:$CONF is not exist..."
+      exit 1
+  fi
+  
+  check_running
+  if [ $? -eq 0 ]; then
+      echo "$NAME (pid $PID) is already running..."
+      exit 0
+  else
+      $BIN -c $CONF > /dev/null 2>&1 &
+      RETVAL=$?
+      if [ $RETVAL -eq 0 ]; then
+          echo "Starting $NAME success"
+      else
+          echo "Starting $NAME failed"
+      fi
+  fi
+}
+
+stop() {
+  check_running
+  if [ $? -eq 0 ]; then
+      kill -SIGINT $PID > /dev/null 2>&1 &	
+      RETVAL=$?
+      if [ $RETVAL -eq 0 ]; then
+          echo "Stopping $NAME success"
+      else
+          echo "Stopping $NAME failed"
+      fi
+  else
+      echo "$NAME is stopped"
+      RETVAL=1
+  fi
+}
