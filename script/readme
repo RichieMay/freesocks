@@ -1,15 +1,18 @@
-openwrt°²×°freesocks½øĞĞÍ¸Ã÷´úÀíËµÃ÷
-1¡¢°²×° dnsmasq-full£¨Ğ¶ÔØÔ­dnsmasq,²»Ö§³Öipset£©¡¢ipset¡¢iptables-mod-nat-extra
-2¡¢°²×° dnscrypt
-  2.1 Ôö¼Óopkg²Ö¿âÔ´
+openwrtå®‰è£…freesocksè¿›è¡Œé€æ˜ä»£ç†è¯´æ˜
+1ã€å®‰è£… dnsmasq-fullï¼ˆå¸è½½åŸdnsmasq,ä¸æ”¯æŒipsetï¼‰ã€ipsetã€iptables-mod-nat-extra
+2ã€å®‰è£… dnscrypt
+  2.1 å¢åŠ opkgä»“åº“æº
     echo 'src/gz exopenwrt http://exopenwrt.roland.black/barrier_breaker/14.07/ar71xx/packages/exopenwrt' >> /etc/opkg.conf
-  2.2 ÅäÖÃ
+  2.2 å®‰è£…
+    opkg update
+    opkg install dnscrypt-proxy
+  2.2 é…ç½®
     vi etc/config/dnscrypt-proxy
-3¡¢ÔÚdnsmasq.d/ÖĞÔö¼Ógfwlist_ipset.conf £¨DNS´úÀíIPÒÔ¼°¶Ë¿ÚÓëdnscryptµÄÅäÖÃÒ»ÖÂ£©
-4¡¢±àÒëÔ´Âë°²×°freesocks £¨ÅäÖÃµÄlisten_ip±ØĞëÎªÂ·ÓÉÆ÷µÄÍø¹ØIP»òÕß0.0.0.0£©
-5¡¢Æô¶¯dnsmasq¡¢dnscrypt¡¢freesocks
-6¡¢Ôö¼Óiptables¶ÔipsetÁĞ±íµÄ×ª·¢
-  ×¢Òâ£ºsetÁĞ±íÃûgfwlistÓëdnsmasqµÄipsetÅäÖÃÎÄ¼şÖĞ±íÃû±ØĞëÒ»ÖÂ¡¢¶Ë¿ÚÓëfreesocksÍ¸Ã÷´úÀíÄ£Ê½¶Ë¿ÚÒ»ÖÂ
+3ã€åœ¨dnsmasq.d/ä¸­å¢åŠ gfwlist_ipset.conf ï¼ˆDNSä»£ç†IPä»¥åŠç«¯å£ä¸dnscryptçš„é…ç½®ä¸€è‡´ï¼‰
+4ã€ç¼–è¯‘æºç å®‰è£…freesocks ï¼ˆé…ç½®çš„listen_ipå¿…é¡»ä¸ºè·¯ç”±å™¨çš„ç½‘å…³IPæˆ–è€…0.0.0.0ï¼‰
+5ã€å¯åŠ¨dnsmasqã€dnscryptã€freesocks
+6ã€å¢åŠ iptableså¯¹ipsetåˆ—è¡¨çš„è½¬å‘
+  æ³¨æ„ï¼šsetåˆ—è¡¨ågfwlistä¸dnsmasqçš„ipseté…ç½®æ–‡ä»¶ä¸­è¡¨åå¿…é¡»ä¸€è‡´ã€ç«¯å£ä¸freesocksé€æ˜ä»£ç†æ¨¡å¼ç«¯å£ä¸€è‡´
   ipset -N gfwlist iphash
   iptables -t nat -A PREROUTING -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-port 1080
-  ½«ÉÏÃæÁ½ÌõÃüÁî¸ù¾İÊµ¼ÊÇé¿öĞŞ¸ÄºóÔö¼Óµ½/etc/firewall.user
+  å°†ä¸Šé¢ä¸¤æ¡å‘½ä»¤æ ¹æ®å®é™…æƒ…å†µä¿®æ”¹åå¢åŠ åˆ°/etc/firewall.user
