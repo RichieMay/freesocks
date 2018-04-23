@@ -17,7 +17,7 @@ if(Boost_FOUND)
 	include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
-#禁用C11
+# 禁用C11
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 # 添加动态函数库/线程库
