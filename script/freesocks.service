@@ -1,0 +1,14 @@
+[Unit]
+Description=freesocks
+After=network.target
+ 
+[Service]
+Type=simple
+ExecStart=/usr/bin/freesocks -c /etc/freesocks.json
+ExecStop=kill -SIGINT $(ps -ef | grep -v grep | grep -i "freesocks.\+-" | awk '{print $2}')
+RestartSec=5s
+Restart=on-failure
+RemainAfterExit=yes
+ 
+[Install]
+WantedBy=multi-user.target
