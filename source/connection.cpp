@@ -52,7 +52,18 @@ bool connection::connect(const std::string & host, boost::uint16_t port)
 		boost::asio::ip::tcp::resolver resolver(hive_->get_io_service());
 		boost::asio::ip::tcp::resolver::query query(host, boost::lexical_cast<std::string>(port));
 		boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);
-		socket_.connect(*iterator);
+		
+		boost::system::error_code ec = boost::asio::error::host_not_found;
+		for (boost::asio::ip::tcp::resolver::iterator end; ec && iterator != end; iterator++)
+		{
+			socket_.close();
+			socket_.connect(*iterator, ec);
+		}
+		
+		if (ec)
+		{
+			return false;
+		}
 
 		on_connect();
 		start_recv();
@@ -145,7 +156,7 @@ void connection::handle_recv(const boost::system::error_code & error, size_t tra
 
 		cache_buffer_size_ = cache_buffer_size_ + (boost::uint32_t)transferred - used;
 
-		if (5 * cache_buffer_size_ >= 4 * recv_buffer_size_) // ³¬¹ı80%¿ªÊ¼À©Èİ
+		if (5 * cache_buffer_size_ >= 4 * recv_buffer_size_) // è¶…è¿‡80%å¼€å§‹æ‰©å®¹
 		{
 			assign_copy();
 		}
@@ -154,7 +165,7 @@ void connection::handle_recv(const boost::system::error_code & error, size_t tra
 	}
 }
 
-void connection::assign_copy() //³Ê2±¶ÊıÀ©Èİ
+void connection::assign_copy() //å‘ˆ2å€æ•°æ‰©å®¹
 {
 	recv_buffer_size_ *= 2;
 	boost::uint8_t *recv_buffer = new boost::uint8_t[recv_buffer_size_];
