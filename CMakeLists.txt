@@ -5,8 +5,8 @@ cmake_minimum_required (VERSION 2.8)
 project (freesocks)
 
 # 设置C/C+编译器
-#set(CMAKE_C_COMPILER mipsel-mt7621-linux-gcc)
-#set(CMAKE_CXX_COMPILER mipsel-mt7621-linux-g++)
+#set(CMAKE_C_COMPILER mipsel-openwrt-linux-gcc)
+#set(CMAKE_CXX_COMPILER mipsel-openwrt-linux-g++)
 
 # 检查boost是否存在
 #set(Boost_USE_STATIC_LIBS ON)
