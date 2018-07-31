@@ -685,7 +685,7 @@ private:
 		boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
 		std::cout << "[" << boost::gregorian::to_iso_extended_string(now.date()) << " " << now.time_of_day()
 			<< (is_server_mode() ? "] freesocks server stopped" :
-			(is_redirect_mode() ? "] freesocks redirect started " : "] freesocks client started ")) << std::endl;
+			(is_redirect_mode() ? "] freesocks redirect stopped " : "] freesocks client stopped ")) << std::endl;
 	}
 
 private:
