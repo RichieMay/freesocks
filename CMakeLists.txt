@@ -4,6 +4,9 @@ cmake_minimum_required (VERSION 2.8)
 # 项目信息
 project (freesocks)
 
+# 编译类型
+set(CMAKE_BUILD_TYPE "Release")
+
 # 设置C/C+编译器
 #set(CMAKE_C_COMPILER mipsel-openwrt-linux-gcc)
 #set(CMAKE_CXX_COMPILER mipsel-openwrt-linux-g++)
