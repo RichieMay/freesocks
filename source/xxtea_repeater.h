@@ -15,9 +15,9 @@ class xxtea_repeater : public repeater
 
 	/*
 	* ┌─────────────────────────────────────────────────────────────────────────┐ 
-	* │ 4 bytes  │	     2 bytes	   │ (srcLen+3)/4*4 bytes │	 4 bytes    │
+	* │ 4 bytes  │	     2 bytes	 │ (srcLen+3)/4*4 bytes │		4 bytes     │  4bytes
 	* │─────────────────────────────────────────────────────────────────────────│
-	* │   total  │total length checksum│        source	  │  source length  │
+	* │   total  │total length checksum│			source		 │  source length  │ timestamp
 	* └─────────────────────────────────────────────────────────────────────────┘
 	*/
 public:
@@ -54,7 +54,12 @@ public:
 		memcpy(p, src, srcLen); // copy source
 
 		boost::uint32_t cipherLen = dstLen - sizeof(boost::uint32_t) - sizeof(boost::uint16_t);
-		memcpy(p + cipherLen - sizeof(boost::uint32_t), &srcLen, sizeof(boost::uint32_t)); //source length 
+		memcpy(p + cipherLen - sizeof(boost::uint32_t) * 2, &srcLen, sizeof(boost::uint32_t)); //source length 
+
+		boost::uint32_t timestamp = boost::posix_time::microsec_clock::universal_time().time_of_day().total_microseconds() & 0xffffffff;
+		memcpy(p + cipherLen - sizeof(boost::uint32_t), &timestamp, sizeof(boost::uint32_t)); //source length
+
+		blur((boost::uint32_t*)p, (cipherLen - sizeof(boost::uint32_t) * 2)/ sizeof(boost::uint32_t), timestamp, true);
 
 		boost::int32_t n = cipherLen / sizeof(boost::uint32_t);//exclude srcLen、checksum
 		btea((boost::uint32_t*)p, n, key_);
@@ -86,7 +91,10 @@ public:
 		boost::int32_t n = cipherLen / sizeof(boost::uint32_t);//exclude srcLen、checksum
 		btea((boost::uint32_t*)p, -n, key_);
 		
-		p += (cipherLen - sizeof(boost::uint32_t));
+		boost::uint32_t timestamp = *((boost::uint32_t*)(p + cipherLen - sizeof(boost::uint32_t)));
+		blur((boost::uint32_t*)p, (cipherLen - sizeof(boost::uint32_t) * 2) / sizeof(boost::uint32_t), timestamp, false);
+
+		p += (cipherLen - sizeof(boost::uint32_t) * 2);
 		dstLen = *((boost::uint32_t*)p);
 		return (totalLen == get_encrypt_length(dstLen) ? totalLen : err_unknown);
 	}
@@ -157,7 +165,7 @@ private:
 
 	boost::uint32_t get_encrypt_length(boost::uint32_t srcLen)
 	{
-		return	10 + (srcLen + 3) / 4 * 4;
+		return	10 + (srcLen + 7) / 4 * 4;
 	}
 
 	int get_decrypt_length(boost::uint8_t* data, boost::uint32_t dataLen, boost::uint32_t& totalLen)
@@ -179,6 +187,27 @@ private:
 			return err_success;
 		}
 	}
+
+	void blur(boost::uint32_t *data, boost::uint32_t dataLen, boost::uint32_t timestamp, bool is_add)
+	{
+		if (is_add)
+		{
+			while (dataLen--)
+			{
+				*data = (*data) + timestamp;
+				data++;
+			}
+		}
+		else
+		{
+			while (dataLen--)
+			{
+				*data = (*data) - timestamp;
+				data++;
+			}
+		}
+	}
+
 private:
 	boost::mutex lock_;
 	std::string secret_;
