@@ -31,7 +31,7 @@ public:
 	void bind(const std::string & ip, boost::uint16_t port);
 
 	// Starts an synchronous connect.
-	bool connect(const std::string & host, boost::uint16_t port);
+	bool connect(const std::string & host, boost::uint16_t port, boost::uint32_t timeout_milliseconds = 2000);
 
 	//data to be sent to the connection.
 	boost::uint32_t send(const boost::uint8_t* buffer, boost::uint32_t length);
@@ -71,7 +71,10 @@ private:
 
 	void handle_recv(const boost::system::error_code & error, size_t transferred);
 
+	void handle_connect(const boost::system::error_code & error);
+
 private:
+	boost::mutex mutex_;
 	boost::uint8_t *recv_buffer_;
 	boost::asio::strand io_strand_;
 	boost::uint32_t timer_interval_;
@@ -80,6 +83,7 @@ private:
 	boost::asio::deadline_timer timer_;
 	boost::posix_time::ptime last_time_;
 	boost::asio::ip::tcp::socket socket_;
+	boost::condition_variable condition_;
 	volatile boost::uint32_t error_state_;
 	const boost::shared_ptr< hive > hive_;
 };

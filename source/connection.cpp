@@ -45,19 +45,32 @@ void connection::bind(const std::string & ip, boost::uint16_t port)
 	socket_.bind(endpoint);
 }
 
-bool connection::connect(const std::string & host, boost::uint16_t port)
+bool connection::connect(const std::string & host, boost::uint16_t port, boost::uint32_t timeout_milliseconds)
 {
 	try
-	{
+	{	
 		boost::asio::ip::tcp::resolver resolver(hive_->get_io_service());
 		boost::asio::ip::tcp::resolver::query query(host, boost::lexical_cast<std::string>(port));
 		boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);
 		
 		boost::system::error_code ec = boost::asio::error::host_not_found;
-		for (boost::asio::ip::tcp::resolver::iterator end; ec && iterator != end; iterator++)
+		for (boost::asio::ip::tcp::resolver::iterator end; iterator != end; iterator++)
 		{
-			socket_.close();
-			socket_.connect(*iterator, ec);
+			boost::unique_lock<boost::mutex> lock(mutex_);
+			socket_.async_connect(*iterator, io_strand_.wrap(boost::bind(&connection::handle_connect, shared_from_this(), _1)));
+			if (condition_.timed_wait(lock, boost::get_system_time() + boost::posix_time::milliseconds(timeout_milliseconds)))
+			{
+				if (socket_.is_open())
+				{
+					ec.clear();
+					break;
+				}
+			}
+			else
+			{
+				socket_.cancel();
+				socket_.close();
+			}
 		}
 		
 		if (ec)
@@ -136,7 +149,6 @@ void connection::dispatch_timer(const boost::system::error_code & error)
 	}
 }
 
-
 void connection::handle_recv(const boost::system::error_code & error, size_t transferred)
 {
 	if (error)
@@ -163,6 +175,18 @@ void connection::handle_recv(const boost::system::error_code & error, size_t tra
 
 		start_recv();
 	}
+}
+
+void connection::handle_connect(const boost::system::error_code & error)
+{
+	if (error)
+	{
+		boost::system::error_code ec;
+		socket_.close(ec);
+	}
+
+	boost::unique_lock<boost::mutex> lock(mutex_);
+	condition_.notify_one();
 }
 
 void connection::assign_copy() //呈2倍数扩容
