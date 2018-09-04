@@ -31,7 +31,7 @@ public:
 	void bind(const std::string & ip, boost::uint16_t port);
 
 	// Starts an synchronous connect.
-	bool connect(const std::string & host, boost::uint16_t port, boost::uint32_t timeout_milliseconds = 5000);
+	bool connect(const std::string & host, boost::uint16_t port, boost::uint32_t timeout_milliseconds = 3000);
 
 	//data to be sent to the connection.
 	boost::uint32_t send(const boost::uint8_t* buffer, boost::uint32_t length);
