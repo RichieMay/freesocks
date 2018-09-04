@@ -53,7 +53,7 @@ bool connection::connect(const std::string & host, boost::uint16_t port, boost::
 		boost::asio::ip::tcp::resolver::query query(host, boost::lexical_cast<std::string>(port));
 		boost::asio::ip::tcp::resolver::iterator iterator = resolver.resolve(query);
 		
-		boost::system::error_code ec = boost::asio::error::host_not_found;
+		boost::system::error_code ec;
 		for (boost::asio::ip::tcp::resolver::iterator end; iterator != end; iterator++)
 		{
 			boost::unique_lock<boost::mutex> lock(mutex_);
@@ -62,26 +62,20 @@ bool connection::connect(const std::string & host, boost::uint16_t port, boost::
 			{
 				if (socket_.is_open())
 				{
-					ec.clear();
-					break;
+					on_connect();
+					start_recv();
+					start_timer();
+					return true;
 				}
 			}
 			else
 			{
-				socket_.cancel();
-				socket_.close();
+				socket_.close(ec);
+				condition_.wait(lock);
 			}
 		}
 		
-		if (ec)
-		{
-			return false;
-		}
-
-		on_connect();
-		start_recv();
-		start_timer();
-		return true;
+		return false;
 	}
 	catch (...) {
 		return false;
