@@ -69,9 +69,12 @@ bool connection::connect(const std::string & host, boost::uint16_t port, boost::
 				}
 			}
 			else
-			{
+			{	
 				socket_.close(ec);
-				condition_.wait(lock);
+				if (!condition_.timed_wait(lock, boost::get_system_time() + boost::posix_time::milliseconds(timeout_milliseconds)))
+				{
+					return false;
+				}
 			}
 		}
 		
