@@ -47,7 +47,7 @@ public:
 
 		boost::uint32_t timestamp = boost::posix_time::microsec_clock::universal_time().time_of_day().total_microseconds() & 0xffffffff;
 		
-		boost::uint32_t blur_total = dstLen ^ dstLen + timestamp;
+		boost::uint32_t blur_total = (dstLen ^ timestamp) + timestamp;
 		memcpy(p, &blur_total, sizeof(boost::uint32_t));// blur total
 		p += sizeof(boost::uint32_t);
 
@@ -186,7 +186,7 @@ private:
 		data += sizeof(boost::uint32_t);
 
 		blur_total -= timestamp;
-		totalLen = blur_total ^ blur_total;
+		totalLen = blur_total ^ timestamp;
 
 		obfuscation_key(timestamp, key);
 		boost::uint16_t checksum = *((boost::uint16_t*)data); //checksum
