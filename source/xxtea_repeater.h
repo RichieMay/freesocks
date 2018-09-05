@@ -23,9 +23,9 @@ class xxtea_repeater : public repeater
 	typedef boost::uint32_t key_t[4];
 public:
 	xxtea_repeater(const std::string& proxy_host, boost::uint16_t proxy_port, const std::string& secret)
-		: proxy_host_(proxy_host), proxy_port_(proxy_port), secret_(secret)
+		: proxy_host_(proxy_host), proxy_port_(proxy_port)
 	{
-		string2key(secret_);
+		string2key(secret);
 	}
 
 	void repeat(const std::string& request_host, boost::uint16_t request_port, std::string& proxy_host, boost::uint16_t& proxy_port)
@@ -220,7 +220,6 @@ private:
 private:
 	key_t key_;
 	boost::mutex lock_;
-	std::string secret_;
 	std::string proxy_host_;
 	boost::uint16_t proxy_port_;
 };
