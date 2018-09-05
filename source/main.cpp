@@ -206,18 +206,18 @@ private:
 	{
 		switch (status_)
 		{
-		case select_method:
-			return handle_parse_select_method(data, dataLen);
-		case proxy_request:
-			return handle_parse_proxy_request(data, dataLen);
-		case proxy_body_repeat:
-			return handle_parse_proxy_content(data, dataLen);
-		case proxy_request_reply:
-			return handle_parse_proxy_request_reply(data, dataLen);
-		case proxy_wait:
-			return handle_parse_proxy_wait(data, dataLen);
-		default:
-			return err_unsupported;
+			case select_method:
+				return handle_parse_select_method(data, dataLen);
+			case proxy_request:
+				return handle_parse_proxy_request(data, dataLen);
+			case proxy_body_repeat:
+				return handle_parse_proxy_content(data, dataLen);
+			case proxy_request_reply:
+				return handle_parse_proxy_request_reply(data, dataLen);
+			case proxy_wait:
+				return handle_parse_proxy_wait(data, dataLen);
+			default:
+				return err_unsupported;
 		}
 	}
 
