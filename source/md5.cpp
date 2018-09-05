@@ -116,7 +116,7 @@ MD5::MD5()
 MD5::MD5(const std::string &text)
 {
 	init();
-	update(text.c_str(), text.length());
+	update(text.c_str(), (uint32)text.length());
 	finalize();
 }
 

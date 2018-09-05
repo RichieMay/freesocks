@@ -512,8 +512,10 @@ public:
 class service : public boost::enable_shared_from_this< service >
 {
 public:
-	service(boost::shared_ptr< hive > hive)
-		: hive_(hive), listen_ip_("127.0.0.1"), listen_port_(1080), redirect_(false)
+	service()
+	: listen_ip_("127.0.0.1")
+	, listen_port_(1080)
+	, redirect_(false)
 	{
 
 	}
@@ -606,8 +608,11 @@ public:
 
 	}
 
-	int run()
+	int run(boost::shared_ptr< server > server)
 	{
+		boost::asio::signal_set signals(server->get_hive()->get_io_service(), SIGINT, SIGTERM);
+		signals.async_wait(boost::bind(&service::handler_signal, shared_from_this(), _1, _2, server));
+
 		boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
 		std::cout << "[" << boost::gregorian::to_iso_extended_string(now.date()) << " " << now.time_of_day()
 			<< (is_server_mode() ? "] freesocks server started " :
@@ -619,11 +624,10 @@ public:
 		size_t _threads_num = cpu_num * 2 + 2;
 		for (size_t i = 0; i < _threads_num; i++)
 		{
-			thread_group_.create_thread(boost::bind(&hive::run, hive_));
+			thread_group_.create_thread(boost::bind(&hive::run, server->get_hive()));//create other thread execute tasks
 		}
 
-		boost::asio::signal_set signals(hive_->get_io_service(), SIGINT, SIGTERM);
-		signals.async_wait(boost::bind(&service::handler_signal, shared_from_this(), _1, _2));
+		boost::bind(&hive::run, server->get_hive())(); //we let main thread execute tasks
 
 		thread_group_.join_all();
 		return 0;
@@ -678,9 +682,10 @@ private:
 		server_port_ = reader.get<boost::uint16_t>("server_port", server_port_);
 	}
 
-	void handler_signal(boost::system::error_code error, int signal_number)
+	void handler_signal(const boost::system::error_code& error, int signal_number,const boost::shared_ptr< server > server)
 	{
-		hive_->stop();
+		server->stop();
+		server->get_hive()->stop();
 
 		boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
 		std::cout << "[" << boost::gregorian::to_iso_extended_string(now.date()) << " " << now.time_of_day()
@@ -695,18 +700,17 @@ private:
 	std::string server_ip_;
 	boost::uint16_t listen_port_;
 	boost::uint16_t server_port_;
-	boost::shared_ptr< hive > hive_;
 };
 
 int main(int argc, const char * argv[])
 {
-	boost::shared_ptr< hive > _hive(new hive());
-	boost::shared_ptr< service > _service(new service(_hive));
+	boost::shared_ptr< service > _service(new service());
 	if (!_service->parse(argc, argv))
 	{
 		return 0;
 	}
 
+	boost::shared_ptr< hive > _hive(new hive());
 	boost::shared_ptr< xxtea_repeater > _repeater(new xxtea_repeater(_service->get_server_ip(), _service->get_server_port(), _service->get_key()));
 
 	boost::shared_ptr< server > _server(new server(_hive));
@@ -714,5 +718,5 @@ int main(int argc, const char * argv[])
 	_server->accept(boost::shared_ptr< client >(new client(_hive, _repeater, _service->is_server_mode() ? client::freesocks : 
 		(_service->is_redirect_mode() ? client::redsocks : client::socks))));
 
-	return _service->run();
+	return _service->run(_server);
 }
