@@ -45,10 +45,13 @@ public:
 		*dst = new boost::uint8_t[dstLen];
 		boost::uint8_t* p = *dst;
 
-		memcpy(p, &dstLen, sizeof(boost::uint32_t));// total
+		boost::uint32_t timestamp = boost::posix_time::microsec_clock::universal_time().time_of_day().total_microseconds() & 0xffffffff;
+		
+		boost::uint32_t blur_total = dstLen ^ dstLen + timestamp;
+		memcpy(p, &blur_total, sizeof(boost::uint32_t));// blur total
 		p += sizeof(boost::uint32_t);
 
-		boost::uint32_t timestamp = boost::posix_time::microsec_clock::universal_time().time_of_day().total_microseconds() & 0xffffffff;
+		
 		memcpy(p, &timestamp, sizeof(boost::uint32_t));// timestamp
 		p += sizeof(boost::uint32_t);
 
@@ -176,11 +179,14 @@ private:
 			return err_no_more;
 		}
 		
-		totalLen = *((boost::uint32_t*)data); //total
+		boost::uint32_t blur_total = *((boost::uint32_t*)data); //blur total
 		data += sizeof(boost::uint32_t);
 
 		boost::uint32_t timestamp = *((boost::uint32_t*)data); //timestamp
 		data += sizeof(boost::uint32_t);
+
+		blur_total -= timestamp;
+		totalLen = blur_total ^ blur_total;
 
 		obfuscation_key(timestamp, key);
 		boost::uint16_t checksum = *((boost::uint16_t*)data); //checksum
