@@ -41,7 +41,6 @@ void connection::bind(const std::string & ip, boost::uint16_t port)
 {
 	boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::address::from_string(ip), port);
 	socket_.open(endpoint.protocol());
-	socket_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
 	socket_.bind(endpoint);
 }
 
