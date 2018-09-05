@@ -51,7 +51,6 @@ public:
 		memcpy(p, &blur_total, sizeof(boost::uint32_t));// blur total
 		p += sizeof(boost::uint32_t);
 
-		
 		memcpy(p, &timestamp, sizeof(boost::uint32_t));// timestamp
 		p += sizeof(boost::uint32_t);
 
@@ -100,7 +99,16 @@ public:
 		
 		p += (cipherLen - sizeof(boost::uint32_t));
 		dstLen = *((boost::uint32_t*)p);
-		return (totalLen == get_encrypt_length(dstLen) ? totalLen : err_unknown);
+
+		if (totalLen == get_encrypt_length(dstLen))
+		{
+			return totalLen;
+		}
+		else
+		{
+			release(*dst);
+			return err_unknown;
+		}
 	}
 
 	void release(boost::uint8_t* dst)
