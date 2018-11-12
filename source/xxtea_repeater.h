@@ -77,7 +77,7 @@ public:
 		key_t key;
 		boost::uint32_t totalLen = 0;
 		int ret = get_decrypt_length(src, srcLen, totalLen, key);
-		if (ret != err_success)
+		if (err_success != ret)
 		{
 			return ret;
 		}

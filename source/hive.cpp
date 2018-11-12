@@ -19,7 +19,7 @@ boost::asio::io_service & hive::get_io_service()
 
 bool hive::has_stopped()
 {
-	return (boost::interprocess::ipcdetail::atomic_cas32(&shutdown_, 1, 1) == 1);
+	return (1 == boost::interprocess::ipcdetail::atomic_cas32(&shutdown_, 1, 1));
 }
 
 void hive::poll()
@@ -34,7 +34,7 @@ void hive::run()
 
 void hive::stop()
 {
-	if (boost::interprocess::ipcdetail::atomic_cas32(&shutdown_, 1, 0) == 0)
+	if (0 == boost::interprocess::ipcdetail::atomic_cas32(&shutdown_, 1, 0))
 	{
 		io_service_.stop();
 	}

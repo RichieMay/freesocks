@@ -112,7 +112,7 @@ void connection::do_accept(const boost::shared_ptr<acceptor> acceptor)
 
 void connection::do_error(const boost::system::error_code & error, bool inner)
 {
-	if (boost::interprocess::ipcdetail::atomic_cas32(&error_state_, 1, 0) == 0)
+	if (0 == boost::interprocess::ipcdetail::atomic_cas32(&error_state_, 1, 0))
 	{
 		boost::system::error_code ec;
 		socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
@@ -204,7 +204,7 @@ void connection::handle_timer(const boost::system::error_code & error)
 	}
 	else 
 	{
-		if (timer_interval_ != 0) {
+		if (0 != timer_interval_) {
 			boost::posix_time::time_duration duration = boost::posix_time::microsec_clock::local_time() - last_time_;
 			if (timer_interval_ <= duration.total_milliseconds()) 
 			{ 

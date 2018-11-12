@@ -37,7 +37,7 @@ void acceptor::stop()
 
 bool acceptor::has_stopped()
 {
-	return (boost::interprocess::ipcdetail::atomic_cas32(&error_state_, 1, 1) == 1);
+	return (1 == boost::interprocess::ipcdetail::atomic_cas32(&error_state_, 1, 1));
 }
 
 boost::shared_ptr<hive> acceptor::get_hive() const
@@ -71,7 +71,7 @@ void acceptor::handle_accept(const boost::system::error_code & error, const boos
 
 void acceptor::handle_error(const boost::system::error_code & error)
 {
-	if (boost::interprocess::ipcdetail::atomic_cas32(&error_state_, 1, 0) == 0)
+	if (0 == boost::interprocess::ipcdetail::atomic_cas32(&error_state_, 1, 0))
 	{
 		boost::system::error_code ec;
 		acceptor_.cancel(ec);

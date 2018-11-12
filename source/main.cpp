@@ -20,7 +20,7 @@ public:
 
 	client(boost::shared_ptr< hive > hive, boost::shared_ptr< repeater > repeater, mode type)
 		: connection(hive), local_ip_("0.0.0.0"), local_port_(0), repeater_(repeater), mode_(type)
-		, status_(type != socks ? proxy_request : select_method)
+		, status_(socks != type? proxy_request : select_method)
 	{
 
 	}
@@ -51,7 +51,7 @@ private:
 #ifndef SO_ORIGINAL_DST
 	#define SO_ORIGINAL_DST 80
 #endif
-		if (mode_ == redsocks)
+		if (redsocks == mode_)
 		{
 			struct sockaddr_storage addr_storage;
 			socklen_t addr_len = sizeof(addr_storage);
@@ -66,7 +66,7 @@ private:
 			struct sockaddr* addr = (struct sockaddr *) &addr_storage;
 			boost::uint8_t request[22] = { 0x05, 0x01, 0x00, ss5_ipv4 };
 			boost::uint32_t request_len = sizeof(request);
-			if (addr->sa_family == AF_INET)
+			if (AF_INET == addr->sa_family)
 			{
 				request[3] = ss5_ipv4;
 				struct sockaddr_in* addr_v4 = (struct sockaddr_in*)addr;
@@ -78,7 +78,7 @@ private:
 
 				request_len = sizeof(ss5_proxy_request) + sizeof(boost::uint32_t) + sizeof(boost::uint16_t);
 			}
-			else if (addr->sa_family == AF_INET6)
+			else if (AF_INET6 == addr->sa_family)
 			{
 				request[3] = ss5_ipv6;
 				struct sockaddr_in6* addr_v6 = (struct sockaddr_in6*)addr;
@@ -122,12 +122,12 @@ private:
 			boost::uint32_t dstLen = length - recv_used;
 
 			boost::int32_t decrypt_used = length - recv_used;
-			if (mode_ == freesocks) //freesocks client / server的数据需要解码
+			if (freesocks == mode_) //freesocks client / server的数据需要解码
 			{
 				decrypt_used = repeater_->decrypt(buffer + recv_used, length - recv_used, &dst, dstLen);
 			}
 
-			if (decrypt_used == err_no_more) //数据不足
+			if (err_no_more == decrypt_used) //数据不足
 			{
 				no_error = false;
 			}
@@ -152,7 +152,7 @@ private:
 					recv_used += decrypt_used;
 				}
 
-				if (mode_ == freesocks)
+				if (freesocks == mode_)
 				{
 					repeater_->release(dst);
 				}
@@ -179,7 +179,7 @@ private:
 		boost::uint32_t dstLen = length;
 		boost::int32_t ret = 0;
 
-		if (mode_ == freesocks) //freesocks client / server的数据需要编码
+		if (freesocks == mode_) //freesocks client / server的数据需要编码
 		{
 			ret = repeater_->encrypt(buffer, length, &dst, dstLen);
 		}
@@ -189,7 +189,7 @@ private:
 		}
 
 		ret = send(dst, dstLen);
-		if (mode_ == freesocks)
+		if (freesocks == mode_)
 		{
 			repeater_->release(dst);
 		}
@@ -225,7 +225,7 @@ private:
 	{
 		CHECK_DATA_LENGTH(dataLen, sizeof(ss5_select_request));
 		ss5_select_request* request = (ss5_select_request*)data;
-		if (request->ver != 0x05) //SOCKS5 version=0x05
+		if (0x05 != request->ver) //SOCKS5 version=0x05
 		{
 			return err_protocol;
 		}
@@ -234,7 +234,7 @@ private:
 
 		for (unsigned int i = 0; i < request->nmethods; i++)
 		{
-			if (request->methods[i] == 0x00) //SOCKS5 no auth
+			if (0x00 == request->methods[i]) //SOCKS5 no auth
 			{
 				ss5_select_response response;
 				response.ver = request->ver;
@@ -257,7 +257,7 @@ private:
 		boost::uint32_t pos = 0;
 		CHECK_DATA_LENGTH(dataLen, sizeof(ss5_proxy_request));
 		ss5_proxy_request* request = (ss5_proxy_request*)(data + pos);
-		if (request->ver != 0x05 || request->rsv != 0x00)
+		if (0x05 != request->ver || 0x00 != request->rsv)
 		{
 			return err_protocol;
 		}
@@ -333,7 +333,7 @@ private:
 	{
 		CHECK_DATA_LENGTH(dataLen, sizeof(ss5_proxy_response));
 		ss5_proxy_response* response = (ss5_proxy_response*)data;
-		if (response->ver != 0x05 || response->rep != 0x00)
+		if (0x05 != response->ver || 0x00 != response->rep)
 		{
 			return err_protocol;
 		}
@@ -362,7 +362,7 @@ private:
 			memcpy(buf + sizeof(ss5_proxy_response) + 16, &port, sizeof(boost::uint16_t));
 		}
 
-		if (client_->mode_ != redsocks)
+		if (redsocks != client_->mode_)
 		{
 			if (bufLen != client_->handle_send(buf, bufLen))
 			{
@@ -389,7 +389,7 @@ private:
 
 	boost::int32_t handle_parse_proxy_wait(boost::uint8_t* data, boost::uint32_t dataLen)
 	{
-		if (mode_ == redsocks)//透明代理模式继续发送数据即可
+		if (redsocks == mode_)//透明代理模式继续发送数据即可
 		{
 			return handle_parse_proxy_content(data, dataLen);
 		}
@@ -402,7 +402,7 @@ private:
 	void handle_parse_cmd_connect(boost::uint8_t* data, boost::uint32_t dataLen, const ss5_porxy_address* address)
 	{
 		ss5_porxy_address proxy_address = *address;
-		if (mode_ == freesocks) //freesocks client
+		if (freesocks == mode_) //freesocks client
 		{
 			client_.reset(new client(get_hive(), repeater_, socks));//freesocks client, freesocks server
 		}
@@ -413,7 +413,7 @@ private:
 			{
 				client_.reset(new client(get_hive(), repeater_, freesocks));//freesocks client, freesocks server
 			}
-			else if(mode_ == socks)
+			else if(socks == mode_)
 			{
 				client_.reset(new client(get_hive(), repeater_, socks));//freesocks client, freesocks server
 			}
@@ -431,7 +431,7 @@ private:
 
 		if (client_->connect(proxy_address.host, proxy_address.port))
 		{
-			if (client_->mode_ == freesocks)
+			if (freesocks == client_->mode_)
 			{
 				status_ = proxy_wait;//等待 freesocks server 响应
 				client_->status_ = proxy_request_reply;
@@ -441,7 +441,7 @@ private:
 					disconnect();
 				}
 			}
-			else if(client_->mode_ == socks)
+			else if(socks == client_->mode_)
 			{
 				response->rep = 0x00;//succeeded
 
@@ -554,7 +554,7 @@ public:
 			{
 				std::string bind_ip_port = vm["bind"].as<std::string>();
 				size_t pos = bind_ip_port.find(":");
-				if (pos != std::string::npos)
+				if (std::string::npos != pos)
 				{
 					listen_ip_ = bind_ip_port.substr(0, pos);
 					listen_port_ = boost::lexical_cast<boost::uint16_t>(bind_ip_port.substr(pos + 1));
@@ -587,7 +587,7 @@ public:
 			{
 				std::string server_ip_port = vm["server"].as<std::string>();
 				size_t pos = server_ip_port.find(":");
-				if (pos != std::string::npos)
+				if (std::string::npos != pos)
 				{
 					server_ip_ = server_ip_port.substr(0, pos);
 					server_port_ = boost::lexical_cast<boost::uint16_t>(server_ip_port.substr(pos + 1));
