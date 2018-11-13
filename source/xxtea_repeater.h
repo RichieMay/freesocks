@@ -45,7 +45,7 @@ public:
 		*dst = new boost::uint8_t[dstLen];
 		boost::uint8_t* p = *dst;
 
-		boost::uint32_t random = (boost::uint32_t)(&p);
+		boost::uint32_t random = *((boost::uint32_t*)(&p));
 		random = (random << 16) + (boost::posix_time::microsec_clock::universal_time().time_of_day().total_microseconds() & 0xffff);
 		
 		boost::uint32_t* variable = (boost::uint32_t*)p;
@@ -95,7 +95,7 @@ public:
 		boost::int32_t n = cipherLen / sizeof(boost::uint32_t);//exclude srcLen、checksum
 		btea((boost::uint32_t*)p, -n, key);
 		
-		dstLen = totalLen - fillLen;
+		dstLen = cipherLen - fillLen;
 		return totalLen;
 	}
 
