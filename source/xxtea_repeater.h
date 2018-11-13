@@ -9,11 +9,11 @@
 #include <boost/thread/mutex.hpp>
 
 /*
-*	+-------------------------------------------------------------------------+
-*	|  4 bytes  |  4 bytes  |  2 bytes  |  (dataLen+3)/4*4 bytes  |  4 bytes  |
-*	+-----------+-----------+-----------+-------------------------------------+
-*	|   total   | timestamp | checksum  |     data + fill data    |  dataLen  |
-*	+-------------------------------------------------------------------------+
+*	+-----------------------------------------------------------------------+
+*	|  4 bytes  |  3 bytes  |  1 byte  |  2 bytes  | (dataLen+3)/4*4 bytes  |
+*	+-----------+-----------+----------+------------------------------------+
+*	|  variable |   total   | fill len | checksum  |    data + fill data    |
+*	+-----------------------------------------------------------------------+
 */
 
 class xxtea_repeater : public repeater
@@ -45,29 +45,32 @@ public:
 		*dst = new boost::uint8_t[dstLen];
 		boost::uint8_t* p = *dst;
 
-		boost::uint32_t timestamp = boost::posix_time::microsec_clock::universal_time().time_of_day().total_microseconds() & 0xffffffff;
+		boost::uint32_t random = (boost::uint32_t)(&p);
+		random = (random << 16) + (boost::posix_time::microsec_clock::universal_time().time_of_day().total_microseconds() & 0xffff);
 		
-		boost::uint32_t blur_total = (dstLen ^ timestamp) + timestamp;
-		memcpy(p, &blur_total, sizeof(boost::uint32_t));// blur total
+		boost::uint32_t* variable = (boost::uint32_t*)p;
+		*variable  = random; // variable
 		p += sizeof(boost::uint32_t);
 
-		memcpy(p, &timestamp, sizeof(boost::uint32_t));// timestamp
+		boost::uint32_t* total_fill = (boost::uint32_t*)p;
+		random = (boost::uint8_t)(dstLen - sizeof(boost::uint32_t) * 2 - sizeof(boost::uint16_t) - srcLen);
+		*total_fill = dstLen + (random << 24);//total and fill length
 		p += sizeof(boost::uint32_t);
 
-		key_t key;
-		obfuscation_key(timestamp, key);
-
-		boost::uint16_t checksum = crc16_check(key, dstLen);
-		memcpy(p, &checksum, sizeof(boost::uint16_t));// checksum
+		boost::uint16_t* checksum = (boost::uint16_t*)p;
+		*checksum = crc16_check(*total_fill);
 		p += sizeof(boost::uint16_t);
 
 		memcpy(p, src, srcLen); // copy source
 
-		boost::uint32_t cipherLen = dstLen - sizeof(boost::uint32_t) * 2 - sizeof(boost::uint16_t);
-		memcpy(p + cipherLen - sizeof(boost::uint32_t), &srcLen, sizeof(boost::uint32_t)); //source length 
+		key_t key;
+		obfuscation_key(*variable, key);
 
+		btea(total_fill, 1, key);//cipher total and fill length
+
+		boost::uint32_t cipherLen = dstLen - sizeof(boost::uint32_t) * 2 - sizeof(boost::uint16_t);
 		boost::int32_t n = cipherLen / sizeof(boost::uint32_t);
-		btea((boost::uint32_t*)p, n, key);
+		btea((boost::uint32_t*)p, n, key);//cipher source
 
 		return srcLen;
 	}
@@ -75,16 +78,11 @@ public:
 	int decrypt(boost::uint8_t* src, boost::uint32_t srcLen, boost::uint8_t** dst, boost::uint32_t& dstLen)
 	{
 		key_t key;
-		boost::uint32_t totalLen = 0;
-		int ret = get_decrypt_length(src, srcLen, totalLen, key);
+		boost::uint32_t totalLen = 0, fillLen = 0;
+		int ret = get_decrypt_length(src, srcLen, totalLen, fillLen, key);
 		if (err_success != ret)
 		{
 			return ret;
-		}
-
-		if (srcLen < totalLen)
-		{
-			return err_no_more;
 		}
 
 		boost::uint32_t cipherLen = totalLen - sizeof(boost::uint32_t) * 2 - sizeof(boost::uint16_t);
@@ -97,18 +95,8 @@ public:
 		boost::int32_t n = cipherLen / sizeof(boost::uint32_t);//exclude srcLen、checksum
 		btea((boost::uint32_t*)p, -n, key);
 		
-		p += (cipherLen - sizeof(boost::uint32_t));
-		dstLen = *((boost::uint32_t*)p);
-
-		if (totalLen == get_encrypt_length(dstLen))
-		{
-			return totalLen;
-		}
-		else
-		{
-			release(*dst);
-			return err_unknown;
-		}
+		dstLen = totalLen - fillLen;
+		return totalLen;
 	}
 
 	void release(boost::uint8_t* dst)
@@ -167,45 +155,51 @@ private:
 		}
 	}
 
-	boost::uint16_t crc16_check(const key_t &key, boost::uint32_t totalLen)
+	boost::uint16_t crc16_check(boost::uint32_t totalLen)
 	{
 		boost::crc_16_type crc16;
-		crc16.process_bytes((boost::uint8_t*)key, sizeof(key_t));
 		crc16.process_bytes((boost::uint8_t*)(&totalLen), sizeof(boost::uint32_t));
 		return crc16.checksum();
 	}
 
 	boost::uint32_t get_encrypt_length(boost::uint32_t srcLen)
 	{
-		return 14 + (srcLen + 3) / 4 * 4;
+		return 10 + (srcLen + 3) / 4 * 4;
 	}
 
-	int get_decrypt_length(boost::uint8_t* data, boost::uint32_t dataLen, boost::uint32_t& totalLen, key_t& key)
+	int get_decrypt_length(boost::uint8_t* data, boost::uint32_t dataLen, boost::uint32_t& totalLen, boost::uint32_t& fillLen, key_t& key)
 	{
 		if (dataLen < (sizeof(boost::uint32_t) * 2 + sizeof(boost::uint16_t)))
 		{
 			return err_no_more;
 		}
 		
-		boost::uint32_t blur_total = *((boost::uint32_t*)data); //blur total
+		boost::uint32_t variable = *((boost::uint32_t*)data); //variable
 		data += sizeof(boost::uint32_t);
 
-		boost::uint32_t timestamp = *((boost::uint32_t*)data); //timestamp
+		obfuscation_key(variable, key);
+
+		boost::uint32_t* total_fill = (boost::uint32_t*)data; //total and fill length
 		data += sizeof(boost::uint32_t);
 
-		blur_total -= timestamp;
-		totalLen = blur_total ^ timestamp;
+		btea(total_fill, -1, key);
 
-		obfuscation_key(timestamp, key);
-		boost::uint16_t checksum = *((boost::uint16_t*)data); //checksum
-		if (checksum != crc16_check(key, totalLen))
+		boost::uint16_t checksum = *((boost::uint16_t*)data);
+		if (checksum != crc16_check(*total_fill))
 		{
 			return err_unknown;
 		}
-		else
+	
+		totalLen = (*total_fill);
+		fillLen = totalLen >> 24;
+		totalLen = totalLen & 0xffffff;
+
+		if (dataLen < totalLen)
 		{
-			return err_success;
+			return err_no_more;
 		}
+
+		return err_success;
 	}
 
 	void obfuscation_key(const boost::uint32_t& timestamp, key_t& key)
