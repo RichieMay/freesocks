@@ -191,7 +191,7 @@ private:
 		boost::uint32_t* total_fill = (boost::uint32_t*)data; //total and fill length
 		data += sizeof(boost::uint32_t);
 
-		btea(total_fill, -2, key);
+		btea(total_fill, -2, key);//attention the code will modify source data
 
 		data_crc16 = *((boost::uint16_t*)data);
 		data += sizeof(boost::uint16_t);
