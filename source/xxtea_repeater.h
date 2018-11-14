@@ -184,23 +184,18 @@ private:
 		}
 		
 		boost::uint32_t* variable = (boost::uint32_t*)data; //variable
-		data += sizeof(boost::uint32_t);
+		boost::uint32_t variable_array[3] = { *variable, *(variable+1), *(variable + 2)};
+	
+		obfuscation_key(variable_array[0], key);
+		btea(variable_array + 1, -2, key);
 
-		obfuscation_key(*variable, key);
-
-		boost::uint32_t* total_fill = (boost::uint32_t*)data; //total and fill length
-		data += sizeof(boost::uint32_t);
-
-		btea(total_fill, -2, key);//attention the code will modify source data
-
-		data_crc16 = *((boost::uint16_t*)data);
-		data += sizeof(boost::uint16_t);
-		if (data_crc16 != crc16_check((boost::uint8_t*)variable, sizeof(boost::uint32_t) * 2))
+		boost::uint16_t* total_crc16 = (boost::uint16_t*)(variable_array + 2);
+		if (*total_crc16 != crc16_check((boost::uint8_t*)variable_array, sizeof(boost::uint32_t) * 2))
 		{
 			return err_unknown;
 		}
 	
-		totalLen = (*total_fill);
+		totalLen = variable_array[1];
 		fillLen = totalLen >> 24;
 		totalLen = totalLen & 0xffffff;
 
@@ -209,7 +204,7 @@ private:
 			return err_no_more;
 		}
 
-		data_crc16 = *((boost::uint16_t*)data);
+		data_crc16 = *(total_crc16 + 1);
 		return err_success;
 	}
 
