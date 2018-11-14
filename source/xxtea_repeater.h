@@ -9,11 +9,11 @@
 #include <boost/thread/mutex.hpp>
 
 /*
-*	+-----------------------------------------------------------------------+
-*	|  4 bytes  |  3 bytes  |  1 byte  |  2 bytes  | (dataLen+3)/4*4 bytes  |
-*	+-----------+-----------+----------+------------------------------------+
-*	|  variable |   total   | fill len | checksum  |    data + fill data    |
-*	+-----------------------------------------------------------------------+
+*	+--------------------------------------------------------------------------------------+
+*	|  4 bytes  |  3 bytes  |  1 byte  |   2 bytes   |  2 bytes   | (dataLen+3)/4*4 bytes  |
+*	+-----------+-----------+----------+---------------------------------------------------+
+*	|  variable |   total   | fill len | total crc16 | data crc16 |    data + fill data    |
+*	+--------------------------------------------------------------------------------------+
 */
 
 class xxtea_repeater : public repeater
@@ -53,22 +53,24 @@ public:
 		p += sizeof(boost::uint32_t);
 
 		boost::uint32_t* total_fill = (boost::uint32_t*)p;
-		random = (boost::uint8_t)(dstLen - sizeof(boost::uint32_t) * 2 - sizeof(boost::uint16_t) - srcLen);
+		random = (boost::uint8_t)(dstLen - sizeof(boost::uint32_t) * 3 - srcLen);
 		*total_fill = dstLen + (random << 24);//total and fill length
 		p += sizeof(boost::uint32_t);
 
 		boost::uint16_t* checksum = (boost::uint16_t*)p;
-		*checksum = crc16_check(*total_fill);
-		p += sizeof(boost::uint16_t);
+		*checksum = crc16_check((boost::uint8_t*)variable, sizeof(boost::uint32_t) * 2);//total crc16
+		checksum++;
+		p += sizeof(boost::uint32_t);
 
 		memcpy(p, src, srcLen); // copy source
+		*checksum = crc16_check(p, dstLen - sizeof(boost::uint32_t) * 3);//data crc16
 
 		key_t key;
 		obfuscation_key(*variable, key);
 
-		btea(total_fill, 1, key);//cipher total and fill length
+		btea(total_fill, 2, key);//cipher total and fill length
 
-		boost::uint32_t cipherLen = dstLen - sizeof(boost::uint32_t) * 2 - sizeof(boost::uint16_t);
+		boost::uint32_t cipherLen = dstLen - sizeof(boost::uint32_t) * 3;
 		boost::int32_t n = cipherLen / sizeof(boost::uint32_t);
 		btea((boost::uint32_t*)p, n, key);//cipher source
 
@@ -78,23 +80,29 @@ public:
 	int decrypt(boost::uint8_t* src, boost::uint32_t srcLen, boost::uint8_t** dst, boost::uint32_t& dstLen)
 	{
 		key_t key;
+		boost::uint16_t data_crc16 = 0;
 		boost::uint32_t totalLen = 0, fillLen = 0;
-		int ret = get_decrypt_length(src, srcLen, totalLen, fillLen, key);
+		int ret = get_decrypt_length(src, srcLen, totalLen, fillLen, data_crc16, key);
 		if (err_success != ret)
 		{
 			return ret;
 		}
 
-		boost::uint32_t cipherLen = totalLen - sizeof(boost::uint32_t) * 2 - sizeof(boost::uint16_t);
+		boost::uint32_t cipherLen = totalLen - sizeof(boost::uint32_t) * 3;
 		*dst = new boost::uint8_t[cipherLen]; //exclude srcLen、checksum
 		boost::uint8_t* p = *dst;
 
-		src += ((sizeof(boost::uint32_t) * 2 + sizeof(boost::uint16_t)));
+		src += (sizeof(boost::uint32_t) * 3);
 		memcpy(p, src, cipherLen); //copy cipher
 
 		boost::int32_t n = cipherLen / sizeof(boost::uint32_t);//exclude srcLen、checksum
 		btea((boost::uint32_t*)p, -n, key);
 		
+		if (data_crc16 != crc16_check(p, cipherLen))
+		{
+			return err_unknown;
+		}
+
 		dstLen = cipherLen - fillLen;
 		return totalLen;
 	}
@@ -155,37 +163,39 @@ private:
 		}
 	}
 
-	boost::uint16_t crc16_check(boost::uint32_t totalLen)
+	boost::uint16_t crc16_check(boost::uint8_t* data, boost::uint32_t dataLen)
 	{
 		boost::crc_16_type crc16;
-		crc16.process_bytes((boost::uint8_t*)(&totalLen), sizeof(boost::uint32_t));
+		crc16.process_bytes(data, dataLen);
 		return crc16.checksum();
 	}
 
 	boost::uint32_t get_encrypt_length(boost::uint32_t srcLen)
 	{
-		return 10 + (srcLen + 3) / 4 * 4;
+		return 12 + (srcLen + 3) / 4 * 4;
 	}
 
-	int get_decrypt_length(boost::uint8_t* data, boost::uint32_t dataLen, boost::uint32_t& totalLen, boost::uint32_t& fillLen, key_t& key)
+	int get_decrypt_length(boost::uint8_t* data, boost::uint32_t dataLen, boost::uint32_t& totalLen, 
+		boost::uint32_t& fillLen, boost::uint16_t& data_crc16, key_t& key)
 	{
-		if (dataLen < (sizeof(boost::uint32_t) * 2 + sizeof(boost::uint16_t)))
+		if (dataLen <= (sizeof(boost::uint32_t) * 3))
 		{
 			return err_no_more;
 		}
 		
-		boost::uint32_t variable = *((boost::uint32_t*)data); //variable
+		boost::uint32_t* variable = (boost::uint32_t*)data; //variable
 		data += sizeof(boost::uint32_t);
 
-		obfuscation_key(variable, key);
+		obfuscation_key(*variable, key);
 
 		boost::uint32_t* total_fill = (boost::uint32_t*)data; //total and fill length
 		data += sizeof(boost::uint32_t);
 
-		btea(total_fill, -1, key);
+		btea(total_fill, -2, key);
 
-		boost::uint16_t checksum = *((boost::uint16_t*)data);
-		if (checksum != crc16_check(*total_fill))
+		data_crc16 = *((boost::uint16_t*)data);
+		data += sizeof(boost::uint16_t);
+		if (data_crc16 != crc16_check((boost::uint8_t*)variable, sizeof(boost::uint32_t) * 2))
 		{
 			return err_unknown;
 		}
@@ -199,6 +209,7 @@ private:
 			return err_no_more;
 		}
 
+		data_crc16 = *((boost::uint16_t*)data);
 		return err_success;
 	}
 
