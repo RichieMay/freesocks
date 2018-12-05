@@ -6,7 +6,7 @@
 connection::connection(const boost::shared_ptr<hive> hive)
 : hive_(hive), socket_(hive->get_io_service()),io_strand_(hive->get_io_service())
 , cache_buffer_size_(0), timer_interval_(10 * 1000), error_state_(0)
-, timer_(hive->get_io_service()), recv_buffer_size_(4*1024)
+, timer_(hive->get_io_service()), recv_buffer_size_(4 * 1024)
 {
 	recv_buffer_ = new boost::uint8_t[recv_buffer_size_];
 }
