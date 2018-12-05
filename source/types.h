@@ -8,6 +8,7 @@
 #endif
 
 #pragma pack(1)
+
 struct ss5_select_request {
 	unsigned char ver;
 	unsigned char nmethods;
@@ -33,11 +34,12 @@ struct ss5_proxy_response {
 	unsigned char atyp;
 };
 
+#pragma pack()
+
 struct ss5_porxy_address {
 	std::string host;
 	unsigned short port;
 };
-#pragma pack()
 
 enum ss5_cmd { ss5_connect = 0x01, ss5_bind, ss5_udp_associate };
 
