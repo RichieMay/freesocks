@@ -7,7 +7,7 @@
 #pragma warning(disable:4200 4715)
 #endif
 
-#pragma pack(1)
+#pragma pack(push, 1)
 
 struct ss5_select_request {
 	unsigned char ver;
@@ -34,7 +34,7 @@ struct ss5_proxy_response {
 	unsigned char atyp;
 };
 
-#pragma pack()
+#pragma pack(pop)
 
 struct ss5_porxy_address {
 	std::string host;
