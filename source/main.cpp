@@ -269,16 +269,15 @@ private:
 		{
 			case ss5_ipv4:
 				{
-					unsigned int ipv4 = 0;
-					CHECK_DATA_LENGTH(dataLen, pos + sizeof(ipv4) + sizeof(address.port));	//IPV4: INT + SHORT
+					CHECK_DATA_LENGTH(dataLen, pos + sizeof(boost::uint32_t) + sizeof(address.port));	//IPV4: INT + SHORT
 
-					memcpy(&ipv4, data + pos, sizeof(ipv4));
-					pos += sizeof(ipv4);
+					boost::uint32_t* ipv4 = (boost::uint32_t*)(data + pos);
+					pos += sizeof(boost::uint32_t);
 
-					memcpy(&address.port, data + pos, sizeof(address.port));
-					pos += sizeof(address.port);
+					address.port = *((boost::uint16_t*)(data + pos));
+					pos += sizeof(boost::uint16_t);
 
-					address.host = boost::asio::ip::address_v4(boost::asio::detail::socket_ops::network_to_host_long(ipv4)).to_string();
+					address.host = boost::asio::ip::address_v4(boost::asio::detail::socket_ops::network_to_host_long(*ipv4)).to_string();
 				}
 				break;
 			case ss5_fqdn:
@@ -291,8 +290,8 @@ private:
 					address.host = std::string((char*)data + pos, domain_len);
 					pos += domain_len;
 
-					memcpy(&address.port, data + pos, sizeof(address.port));
-					pos += sizeof(address.port);
+					address.port = *((boost::uint16_t*)(data + pos));
+					pos += sizeof(boost::uint16_t);
 				}
 				break;
 			case ss5_ipv6:
@@ -302,8 +301,8 @@ private:
 					memcpy(ipv6.data(), data + pos, ipv6.size());
 					pos += ((uint32_t)ipv6.size());
 
-					memcpy(&address.port, data + pos, sizeof(address.port));
-					pos += sizeof(address.port);
+					address.port = *((boost::uint16_t*)(data + pos));
+					pos += sizeof(boost::uint16_t);
 
 					address.host = boost::asio::ip::address_v6(ipv6).to_string();
 				}
@@ -350,16 +349,18 @@ private:
 		{
 			bufLen = 10;
 			response->atyp = ss5_ipv4;
-			boost::uint32_t ipv4 = (boost::uint32_t)boost::asio::detail::socket_ops::host_to_network_long(addr.to_v4().to_ulong());
-			memcpy(buf + sizeof(ss5_proxy_response), &ipv4, sizeof(boost::uint32_t));
-			memcpy(buf + sizeof(ss5_proxy_response) + sizeof(boost::uint32_t), &port, sizeof(boost::uint16_t));
+			*((boost::uint32_t*)(buf + sizeof(ss5_proxy_response))) = 
+				(boost::uint32_t)boost::asio::detail::socket_ops::host_to_network_long(addr.to_v4().to_ulong());
+			
+			*((boost::uint16_t*)(buf + sizeof(ss5_proxy_response) + sizeof(boost::uint32_t))) = port;
 		}
 		else
 		{
 			bufLen = 22;
 			response->atyp = ss5_ipv6;
-			memcpy(buf + sizeof(ss5_proxy_response), local_ip_.c_str(), 16);
-			memcpy(buf + sizeof(ss5_proxy_response) + 16, &port, sizeof(boost::uint16_t));
+			memcpy(buf + sizeof(ss5_proxy_response), local_ip_.c_str(), 16);	
+
+			*((boost::uint16_t*)(buf + sizeof(ss5_proxy_response) + 16)) = port;
 		}
 
 		if (redsocks != client_->mode_)
@@ -451,16 +452,18 @@ private:
 				{
 					bufLen = 10;
 					response->atyp = ss5_ipv4;
-					boost::uint32_t ipv4 = (boost::uint32_t)boost::asio::detail::socket_ops::host_to_network_long(addr.to_v4().to_ulong());
-					memcpy(buf + sizeof(ss5_proxy_response), &ipv4, sizeof(boost::uint32_t));
-					memcpy(buf + sizeof(ss5_proxy_response) + sizeof(boost::uint32_t), &port, sizeof(boost::uint16_t));
+					*((boost::uint32_t*)(buf + sizeof(ss5_proxy_response))) =
+						(boost::uint32_t)boost::asio::detail::socket_ops::host_to_network_long(addr.to_v4().to_ulong());
+
+					*((boost::uint16_t*)(buf + sizeof(ss5_proxy_response) + sizeof(boost::uint32_t))) = port;
 				}
 				else
 				{
 					bufLen = 22;
 					response->atyp = ss5_ipv6;
 					memcpy(buf + sizeof(ss5_proxy_response), client_->local_ip_.c_str(), 16);
-					memcpy(buf + sizeof(ss5_proxy_response) + 16, &port, sizeof(boost::uint16_t));
+
+					*((boost::uint16_t*)(buf + sizeof(ss5_proxy_response) + 16)) = port;
 				}
 
 				if (bufLen == handle_send(buf, bufLen))
