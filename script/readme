@@ -7,7 +7,6 @@ openwrt安装freesocks进行透明代理说明
     opkg install dnscrypt-proxy
     配置 dnscrypt
     vi etc/config/dnscrypt-proxy（默认即可）
-    
 4、在dnsmasq.d/中增加ipset.conf （DNS代理IP以及端口与dnscrypt的配置一致）
 5、编译源码安装freesocks （配置的listen_ip必须为路由器的网关IP或者0.0.0.0）
 6、启动dnsmasq、dnscrypt(注意启用开机启动)、freesocks
@@ -16,3 +15,4 @@ openwrt安装freesocks进行透明代理说明
   ipset -N $set_name iphash
   iptables -t nat -A PREROUTING -p tcp -m set --match-set $set_name dst -j REDIRECT --to-port $freesocks_redirect_port
   将上面两条命令根据实际情况修改后增加到/etc/firewall.user
+8、局域网内的网络设备DNS设置成路由器IP即可
