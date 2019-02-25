@@ -31,6 +31,10 @@ If you are using Mac OS:
 brew install wget boost@1.60 cmake gcc
 ```
 
+If you are using Windows:
+install boost and VS2010、VS2013、VS2015 or later
+
+
 ### Get the latest source code
 
 To get the latest source code, you should also update the submodules as following:
@@ -65,3 +69,7 @@ mkdir build && cd build
 cmake .. -DBOOST_ROOT=/usr/local/Cellar/boost\@1.60/1.60.0
 make
 ```
+
+
+If you are using Windows:
+open visual studio project file[freesocks.vcxproj]
