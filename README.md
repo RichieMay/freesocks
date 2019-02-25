@@ -31,7 +31,7 @@ If you are using Mac OS:
 brew install wget boost@1.60 cmake gcc
 ```
 
-If you are using Windows:
+If you are using Windows:  
 install boost and VS2010、VS2013、VS2015 or later
 
 
@@ -71,5 +71,5 @@ make
 ```
 
 
-If you are using Windows:
+If you are using Windows:  
 open visual studio project file[freesocks.vcxproj]
