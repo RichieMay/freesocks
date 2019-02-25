@@ -32,7 +32,9 @@ brew install wget boost@1.60 cmake gcc
 ```
 
 If you are using Windows:  
+```
 install boost and VS2010、VS2013、VS2015 or later
+```
 
 
 ### Get the latest source code
@@ -72,4 +74,6 @@ make
 
 
 If you are using Windows:  
-open visual studio project file[freesocks.vcxproj]
+```
+open visual studio project file "freesocks.vcxproj"
+```
