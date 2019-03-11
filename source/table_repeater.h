@@ -67,7 +67,7 @@ public:
 		return dstLen;
 	}
 
-	void release(boost::uint8_t* dst)
+	void release(bool is_encypt, boost::uint8_t* dst)
 	{
 
 	}

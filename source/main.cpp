@@ -154,7 +154,7 @@ private:
 
 				if (freesocks == mode_)
 				{
-					repeater_->release(dst);
+					repeater_->release(false, dst);
 				}
 			}
 		} while (no_error && (recv_used < length));
@@ -191,7 +191,7 @@ private:
 		ret = send(dst, dstLen);
 		if (freesocks == mode_)
 		{
-			repeater_->release(dst);
+			repeater_->release(true, dst);
 		}
 
 		if (ret != dstLen)

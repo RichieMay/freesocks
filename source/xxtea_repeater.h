@@ -9,6 +9,7 @@
 #include <boost/thread/mutex.hpp>
 
 /*
+*   Network Byte Order
 *	+--------------------------------------------------------------------------------------+
 *	|  4 bytes  |  3 bytes  |  1 byte  |   2 bytes   |  2 bytes   | (dataLen+3)/4*4 bytes  |
 *	+-----------+-----------+----------+---------------------------------------------------+
@@ -107,7 +108,7 @@ public:
 		return totalLen;
 	}
 
-	void release(boost::uint8_t* dst)
+	void release(bool is_encypt, boost::uint8_t* dst)
 	{
 		delete []dst;
 	}

@@ -17,7 +17,7 @@ public:
 	virtual int decrypt(boost::uint8_t* src, boost::uint32_t srcLen, boost::uint8_t** dst, boost::uint32_t& dstLen) = 0;
 
 	//数据回收请求
-	virtual void release(boost::uint8_t* dst) = 0;
+	virtual void release(bool is_encypt, boost::uint8_t* dst) = 0;
 };
 
 #endif
