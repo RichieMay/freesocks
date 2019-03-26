@@ -42,12 +42,13 @@ public:
 
 	int encrypt(boost::uint8_t* src, boost::uint32_t srcLen, boost::uint8_t** dst, boost::uint32_t& dstLen)
 	{
-		dstLen = get_encrypt_length(srcLen);
+		boost::uint64_t microseconds = boost::posix_time::microsec_clock::universal_time().time_of_day().total_nanoseconds();
+		dstLen = get_encrypt_length(srcLen, microseconds);
 		*dst = new boost::uint8_t[dstLen];
 		boost::uint8_t* p = *dst;
 
 		boost::uint32_t random = *((boost::uint32_t*)(&p));
-		random = (random << 16) + (boost::posix_time::microsec_clock::universal_time().time_of_day().total_microseconds() & 0xffff);
+		random = (random << 16) + (microseconds & 0xffff);
 		
 		boost::uint32_t* variable = (boost::uint32_t*)p;
 		*variable  = random; // variable
@@ -171,9 +172,10 @@ private:
 		return crc16.checksum();
 	}
 
-	boost::uint32_t get_encrypt_length(boost::uint32_t srcLen)
+	boost::uint32_t get_encrypt_length(boost::uint32_t srcLen, boost::uint64_t microseconds)
 	{
-		return 12 + (srcLen + 3) / 4 * 4;
+		boost::uint8_t range = 3 + microseconds % 253;
+		return 12 + (srcLen + range) / 4 * 4;
 	}
 
 	int get_decrypt_length(boost::uint8_t* data, boost::uint32_t dataLen, boost::uint32_t& totalLen, 
