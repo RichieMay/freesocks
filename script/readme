@@ -16,3 +16,9 @@ openwrt安装freesocks进行透明代理说明
   iptables -t nat -A PREROUTING -p tcp -m set --match-set $set_name dst -j REDIRECT --to-port $freesocks_redirect_port
   将上面两条命令根据实际情况修改后增加到/etc/firewall.user
 8、局域网内的网络设备DNS设置成路由器IP即可
+macOS安装freesocks进行代理说明
+1、编译安装freesocks
+2、为freesocks编辑配置文件（若直接使用命令行传参可以省略此步）
+3、拷贝freesocks.plist到/Library/LaunchAgents/（需要sudo）
+4、修改freesocks.plist中对应的启动参数
+5、安装完成，注销登陆查看是否已启动
