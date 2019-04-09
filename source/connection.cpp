@@ -62,6 +62,7 @@ bool connection::connect(const std::string & host, boost::uint16_t port, boost::
 				if (socket_.is_open())
 				{
 					on_connect();
+
 					start_recv();
 					start_timer();
 					return true;

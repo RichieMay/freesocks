@@ -20,7 +20,7 @@ public:
 
 	client(boost::shared_ptr< hive > hive, boost::shared_ptr< repeater > repeater, mode type)
 		: connection(hive), local_ip_("0.0.0.0"), local_port_(0), repeater_(repeater), mode_(type)
-		, status_(socks != type? proxy_request : select_method)
+		, status_(socks != type? proxy_request : select_method), disconnect_(true)
 	{
 
 	}
@@ -38,6 +38,7 @@ public:
 private:
 	mode mode_;
 	status status_;
+	bool disconnect_;
 	std::string local_ip_;
 	boost::uint16_t local_port_;
 	boost::shared_ptr< client > client_;
@@ -49,7 +50,7 @@ private:
 	{
 #ifdef __linux__
 #ifndef SO_ORIGINAL_DST
-	#define SO_ORIGINAL_DST 80
+#define SO_ORIGINAL_DST 80
 #endif
 		if (redsocks == mode_)
 		{
@@ -97,7 +98,22 @@ private:
 
 			handle_parse_proxy_request(request, request_len);
 		}
-#endif
+		else
+#endif			
+		if (freesocks == mode_)
+		{
+			boost::system::error_code ec;
+			boost::asio::ip::tcp::endpoint ep = get_socket().remote_endpoint(ec);
+			if (!ec)
+			{
+
+				std::stringstream ss;
+				ss << "a new connection from " << ep.address().to_string(ec) << ":" << ep.port();
+				logging(ss.str());
+			}
+		}
+
+		disconnect_ = (boost::posix_time::microsec_clock::universal_time().time_of_day().total_milliseconds() % 2 == 0);
 	}
 
 	void on_connect()
@@ -107,13 +123,12 @@ private:
 		if (!ec)
 		{
 			local_port_ = ep.port();
-			local_ip_ = ep.address().to_string();
+			local_ip_ = ep.address().to_string(ec);
 		}
 	}
 
 	boost::uint32_t on_recv(boost::uint8_t* buffer, boost::uint32_t length)
 	{
-		bool no_error = true;
 		boost::uint32_t recv_used = 0;
 
 		do
@@ -129,23 +144,26 @@ private:
 
 			if (err_no_more == decrypt_used) //数据不足
 			{
-				no_error = false;
+				break;
 			}
 			else if (decrypt_used < err_success) //解码出错
 			{
-				no_error = false;
-				disconnect();
+				recv_used = length;
+				on_disconnect();
+				break;
 			}
 			else //解码成功并且返回已使用的数据长度
 			{
 				int ret = handle_parse_packet(dst, dstLen);
 				if (err_success != ret)
 				{
-					no_error = false;
 					if (err_no_more != ret)
 					{
-						disconnect();
+						recv_used = length;
+						on_disconnect();
 					}
+					
+					break;
 				}
 				else
 				{
@@ -157,7 +175,7 @@ private:
 					repeater_->release(false, dst);
 				}
 			}
-		} while (no_error && (recv_used < length));
+		} while (recv_used < length);
 
 		return recv_used;
 	}
@@ -168,6 +186,15 @@ private:
 		{
 			client_->disconnect();
 			client_.reset();
+		}
+	}
+
+	void on_disconnect() {
+
+		//根据时间做断开处理
+		if (disconnect_)
+		{
+			disconnect();
 		}
 	}
 
@@ -615,15 +642,14 @@ public:
 		boost::asio::signal_set signals(server->get_hive()->get_io_service(), SIGINT, SIGTERM);
 		signals.async_wait(boost::bind(&service::handler_signal, shared_from_this(), _1, _2, server));
 
-		boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-		std::cout << "[" << boost::gregorian::to_iso_extended_string(now.date()) << " " << now.time_of_day()
-			<< (is_server_mode() ? "] freesocks server started " :
-			(is_redirect_mode() ? "] freesocks redirect started " :"] freesocks client started "))
-			<< listen_ip_ << ":" << listen_port_ << std::endl;
+		std::stringstream ss;
+		ss << "freesocks " << (is_server_mode() ? "server" : (is_redirect_mode() ? "redirect" : "client")) << " started on "
+			<< listen_ip_ << ":" << listen_port_;
+		logging(ss.str());
 
 		boost::thread_group thread_group_;
 		size_t cpu_num = boost::thread::hardware_concurrency();
-		size_t threads_num = cpu_num * 2 + 2;
+		size_t threads_num = cpu_num * 4 + 2;
 		for (size_t i = 0; i < threads_num; i++)
 		{
 			thread_group_.create_thread(boost::bind(&hive::run, server->get_hive()));//create other thread execute tasks
@@ -689,10 +715,9 @@ private:
 		server->stop();
 		server->get_hive()->stop();
 
-		boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-		std::cout << "[" << boost::gregorian::to_iso_extended_string(now.date()) << " " << now.time_of_day()
-			<< (is_server_mode() ? "] freesocks server stopped" :
-			(is_redirect_mode() ? "] freesocks redirect stopped " : "] freesocks client stopped ")) << std::endl;
+		std::stringstream ss;
+		ss << "freesocks " << (is_server_mode() ? "server" : (is_redirect_mode() ? "redirect" : "client")) << " stopped";
+		logging(ss.str());
 	}
 
 private:

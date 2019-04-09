@@ -3,10 +3,10 @@
 
 #include "md5.h"
 #include "types.h"
+#include "logging.h"
 #include "repeater.h"
 #include <boost/crc.hpp>
-#include <boost/date_time.hpp>
-#include <boost/thread/mutex.hpp>
+
 
 /*
 *   Network Byte Order
@@ -34,10 +34,9 @@ public:
 		proxy_host = proxy_host_;
 		proxy_port = proxy_port_;
 
-		boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-		lock_.lock();
-		std::cout << "[" << boost::gregorian::to_iso_extended_string(now.date()) << " " << now.time_of_day() << "] proxy connect " << request_host << ":" << request_port << " to " << proxy_host << ":" << proxy_port << std::endl;
-		lock_.unlock();
+		std::stringstream ss;
+		ss << "proxy connect " << request_host << ":" << request_port << " to " << proxy_host << ":" << proxy_port;
+		logging(ss.str());
 	}
 
 	int encrypt(boost::uint8_t* src, boost::uint32_t srcLen, boost::uint8_t** dst, boost::uint32_t& dstLen)
@@ -174,7 +173,7 @@ private:
 
 	boost::uint32_t get_encrypt_length(boost::uint32_t srcLen, boost::uint64_t microseconds)
 	{
-		boost::uint8_t range = 3 + microseconds % 253;
+		boost::uint8_t range = 127 + microseconds % 129;
 		return 12 + (srcLen + range) / 4 * 4;
 	}
 
@@ -222,7 +221,6 @@ private:
 
 private:
 	key_t key_;
-	boost::mutex lock_;
 	std::string proxy_host_;
 	boost::uint16_t proxy_port_;
 };

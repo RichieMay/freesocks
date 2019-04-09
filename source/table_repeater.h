@@ -1,14 +1,12 @@
 #ifndef _TABLE_REPEATER_H_
 #define _TABLE_REPEATER_H_
 
+#include "logging.h"
 #include "repeater.h"
-#include <boost/date_time.hpp>
-#include <boost/thread/mutex.hpp>
 
 class table_repeater : public repeater
 {
 private:
-	boost::mutex lock_;
 	std::string proxy_host_;
 	boost::uint16_t proxy_port_;
 	unsigned char* encrypt_table_;
@@ -77,10 +75,9 @@ public:
 		proxy_host = proxy_host_;
 		proxy_port = proxy_port_;
 
-		boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-		lock_.lock();
-		std::cout << "[" << boost::gregorian::to_iso_extended_string(now.date()) << " " << now.time_of_day() << "] proxy connect " << request_host << ":" << request_port << " to " << proxy_host << ":" << proxy_port << std::endl;
-		lock_.unlock();
+		std::stringstream ss;
+		ss << "proxy connect " << request_host << ":" << request_port << " to " << proxy_host << ":" << proxy_port;
+		logging(ss.str());
 	}
 };
 
