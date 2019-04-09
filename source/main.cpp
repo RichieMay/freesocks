@@ -316,16 +316,13 @@ private:
 		switch (request->cmd)
 		{
 			case ss5_connect:
-				handle_parse_cmd_connect(data, pos, &address);
-				break;
+				return handle_parse_cmd_connect(data, pos, &address);
 			case ss5_bind:
 			case ss5_udp_associate:
 				return err_unsupported;
 			default:
 				return err_protocol;
 		}
-
-		return err_success;
 	}
 
 	boost::int32_t handle_parse_proxy_request_reply(boost::uint8_t* data, boost::uint32_t dataLen)
@@ -400,7 +397,7 @@ private:
 		}
 	}
 
-	void handle_parse_cmd_connect(boost::uint8_t* data, boost::uint32_t dataLen, const ss5_porxy_address* address)
+	boost::int32_t handle_parse_cmd_connect(boost::uint8_t* data, boost::uint32_t dataLen, const ss5_porxy_address* address)
 	{
 		ss5_porxy_address proxy_address = *address;
 		if (freesocks == mode_) //freesocks client
@@ -420,7 +417,7 @@ private:
 			}
 			else
 			{
-				return disconnect();
+				return err_unknown;
 			}
 		}
 
@@ -439,7 +436,7 @@ private:
 				client_->client_ = boost::dynamic_pointer_cast<client>(shared_from_this());
 				if (dataLen != client_->handle_send(data, dataLen)) //向 freesocks server 发送代理请求
 				{
-					disconnect();
+					return err_send_fail;
 				}
 			}
 			else if(socks == client_->mode_)
@@ -473,19 +470,21 @@ private:
 				}
 				else
 				{
-					disconnect();
+					return err_send_fail;
 				}
 			}
 			else //unreachable block
 			{
-				disconnect();
+				return err_unknown;
 			}
+
+			return err_success;
 		}
 		else
 		{
 			response->rep = 0x07;
 			handle_send(buf, bufLen);
-			disconnect();
+			return err_connect_fail;
 		}
 	}
 };

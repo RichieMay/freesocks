@@ -47,10 +47,12 @@ enum ss5_atyp { ss5_ipv4 = 0x01, ss5_fqdn = 0x03, ss5_ipv6 = 0x04 };
 
 enum error_code {
 	err_success = 0,
-	err_no_more = -1,
-	err_protocol = -2,
-	err_auth = -3,
-	err_unsupported = -4,
-	err_unknown = -6
+	err_unknown = -1,
+	err_no_more = -2,
+	err_protocol = -3,
+	err_auth = -4,
+	err_unsupported = -5,
+	err_send_fail = -6,
+	err_connect_fail = -7
 };
 #endif
