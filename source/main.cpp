@@ -113,7 +113,6 @@ private:
 
 	boost::uint32_t on_recv(boost::uint8_t* buffer, boost::uint32_t length)
 	{
-		bool no_error = true;
 		boost::uint32_t recv_used = 0;
 
 		do
@@ -129,23 +128,24 @@ private:
 
 			if (err_no_more == decrypt_used) //数据不足
 			{
-				no_error = false;
+				break;
 			}
 			else if (decrypt_used < err_success) //解码出错
 			{
-				no_error = false;
 				disconnect();
+				break;
 			}
 			else //解码成功并且返回已使用的数据长度
 			{
 				int ret = handle_parse_packet(dst, dstLen);
 				if (err_success != ret)
 				{
-					no_error = false;
 					if (err_no_more != ret)
 					{
 						disconnect();
 					}
+					
+					break;
 				}
 				else
 				{
@@ -157,7 +157,7 @@ private:
 					repeater_->release(false, dst);
 				}
 			}
-		} while (no_error && (recv_used < length));
+		} while (recv_used < length);
 
 		return recv_used;
 	}
