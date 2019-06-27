@@ -50,7 +50,7 @@ private:
 	{
 #ifdef __linux__
 #ifndef SO_ORIGINAL_DST
-#define SO_ORIGINAL_DST 80
+	#define SO_ORIGINAL_DST 80
 #endif
 		if (redsocks == mode_)
 		{
@@ -92,11 +92,13 @@ private:
 			}
 			else
 			{
-				disconnect();
-				return;
+				return disconnect();
 			}
 
-			handle_parse_proxy_request(request, request_len);
+			if (err_success != handle_parse_proxy_request(request, request_len))
+			{
+				return disconnect();
+			}
 		}
 		else
 #endif			
