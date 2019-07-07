@@ -651,7 +651,7 @@ public:
 
 		boost::thread_group thread_group_;
 		size_t cpu_num = boost::thread::hardware_concurrency();
-		size_t threads_num = cpu_num * 4 + 2;
+		size_t threads_num = cpu_num * 2 + 2;
 		for (size_t i = 0; i < threads_num; i++)
 		{
 			thread_group_.create_thread(boost::bind(&hive::run, server->get_hive()));//create other thread execute tasks
