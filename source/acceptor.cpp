@@ -22,7 +22,7 @@ void acceptor::listen(const std::string & host, const boost::uint16_t & port)
 	acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
 
 	acceptor_.bind(endpoint);
-	acceptor_.listen(10);
+	acceptor_.listen(100);
 }
 
 void acceptor::accept(const boost::shared_ptr< connection > connection)
