@@ -24,7 +24,6 @@ endif()
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
 # 添加动态函数库/线程库
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ldl")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
 # 查找指定目录下的所有源文件
